@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
   try {
     const tracks = await runWithCookiesAsync(cookieStore, async () => {
       if (!isSpotifyConnected()) {
-        console.warn('[API /music/recommendations] No Spotify tokens (cookies missing or expired)');
+        console.warn('[API /music/recommendations] No Spotify tokens (cookies + file fallback both empty)');
         return [];
       }
       const service = getMusicService();

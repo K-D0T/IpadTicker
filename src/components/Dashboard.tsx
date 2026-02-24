@@ -189,7 +189,6 @@ export default function Dashboard() {
             razorbacksLeague={settings.razorbacksSport}
             leagues={settings.selectedLeagues}
           />
-          <p className="text-[9px] text-gray-600 text-center py-1 tracking-wider">Tap &quot;Music &amp; Queue&quot; above or swipe left</p>
         </div>
 
         <div

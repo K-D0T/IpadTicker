@@ -76,14 +76,16 @@ function getTokens(): SpotifyTokens | null {
   const store = spotifyStorage.getStore();
   if (store?.cookies) {
     const refresh = store.cookies.get(COOKIE_REFRESH)?.value;
-    if (!refresh) return null;
-    const access = store.cookies.get(COOKIE_ACCESS)?.value;
-    const expiresStr = store.cookies.get(COOKIE_EXPIRES)?.value;
-    const expiresAt = expiresStr ? parseInt(expiresStr, 10) : 0;
-    if (access && expiresAt > Date.now() + 60000) {
-      return { accessToken: access, refreshToken: refresh, expiresAt };
+    if (refresh) {
+      const access = store.cookies.get(COOKIE_ACCESS)?.value;
+      const expiresStr = store.cookies.get(COOKIE_EXPIRES)?.value;
+      const expiresAt = expiresStr ? parseInt(expiresStr, 10) : 0;
+      if (access && expiresAt > Date.now() + 60000) {
+        return { accessToken: access, refreshToken: refresh, expiresAt };
+      }
+      return { accessToken: '', refreshToken: refresh, expiresAt: 0 };
     }
-    return { accessToken: '', refreshToken: refresh, expiresAt: 0 };
+    // Cookies context but no refresh (e.g. Next.js empty in Route Handler) — fall through to file
   }
 
   try {
