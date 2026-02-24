@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useSettings } from '@/hooks/useSettings';
 import { useMusicPlayer } from '@/hooks/useMusicPlayer';
@@ -25,18 +25,29 @@ export default function Dashboard() {
   const musicPanelRef = useRef<HTMLDivElement>(null);
   const music = useMusicPlayer();
 
+  const syncPageFromScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const w = el.clientWidth || el.offsetWidth;
+    if (w <= 0) return;
+    const index = Math.round(el.scrollLeft / w);
+    setPage(Math.min(Math.max(0, index), 1));
+  }, []);
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const onScroll = () => {
-      const w = el.clientWidth;
-      if (w <= 0) return;
-      const index = Math.round(el.scrollLeft / w);
-      setPage(Math.min(index, 1));
+    const onScroll = () => requestAnimationFrame(syncPageFromScroll);
+    const onTouchEnd = () => {
+      requestAnimationFrame(syncPageFromScroll);
     };
     el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
-  }, []);
+    el.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      el.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [syncPageFromScroll]);
 
   const scrollToPage = (index: number) => {
     if (index === 1 && musicPanelRef.current) {

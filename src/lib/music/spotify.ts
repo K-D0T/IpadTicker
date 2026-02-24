@@ -297,4 +297,61 @@ export class SpotifyMusicService implements MusicService {
       throw new Error(text || 'Failed to add to queue');
     }
   }
+
+  async getQueue(): Promise<SearchTrack[]> {
+    const res = await spotifyFetch('/me/player/queue');
+    if (res.status === 204 || !res.ok) return [];
+    const data = await res.json();
+    const queue = data.queue ?? [];
+    return queue.map((t: {
+      id: string;
+      uri: string;
+      name: string;
+      artists: { name: string }[];
+      album: { name: string; images?: { url: string }[] };
+      duration_ms: number;
+    }) => ({
+      id: t.id,
+      uri: t.uri,
+      name: t.name || 'Unknown',
+      artist: t.artists?.map((a) => a.name).join(', ') || 'Unknown',
+      album: t.album?.name || '',
+      albumArtUrl: t.album?.images?.[0]?.url ?? null,
+      durationMs: t.duration_ms ?? 0,
+    }));
+  }
+
+  async getRecommendations(seedTrackId?: string | null): Promise<SearchTrack[]> {
+    let seed = seedTrackId?.trim();
+    if (!seed) {
+      const np = await spotifyFetch('/me/player/currently-playing');
+      if (np.ok) {
+        const data = await np.json();
+        seed = data.item?.id ?? '';
+      }
+    }
+    const params = new URLSearchParams({ limit: '15' });
+    if (seed) params.set('seed_tracks', seed);
+    else params.set('seed_genres', 'pop,hip-hop,rock');
+    const res = await spotifyFetch(`/recommendations?${params.toString()}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const items = data.tracks ?? [];
+    return items.map((t: {
+      id: string;
+      uri: string;
+      name: string;
+      artists: { name: string }[];
+      album: { name: string; images?: { url: string }[] };
+      duration_ms: number;
+    }) => ({
+      id: t.id,
+      uri: t.uri,
+      name: t.name || 'Unknown',
+      artist: t.artists?.map((a) => a.name).join(', ') || 'Unknown',
+      album: t.album?.name || '',
+      albumArtUrl: t.album?.images?.[0]?.url ?? null,
+      durationMs: t.duration_ms ?? 0,
+    }));
+  }
 }
