@@ -303,15 +303,17 @@ export default function MusicPicker({ music, compactLayout = false }: { music: M
     return (
       <LedOverlay className="tile-card rounded-xl border border-white/10 flex flex-col overflow-hidden h-full" intensity={0.08}>
         <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
-          <div className="flex gap-3 min-h-0 shrink-0" style={{ minHeight: 0 }}>
-            <div className="w-[280px] shrink-0">
+          {/* Top row: 2/7 height. Now playing 3:1, queue 1:4 width */}
+          <div className="flex gap-3 min-h-0 flex-[2] overflow-hidden" style={{ minHeight: 0 }}>
+            <div className="flex-[3] min-w-0 flex flex-col overflow-hidden">
               <ExpandedMusicPlayer music={music} onCollapse={() => {}} compact />
             </div>
-            <div className="flex-1 min-w-0 flex flex-col rounded-lg bg-white/[0.02] border border-white/5 overflow-hidden">
+            <div className="flex-[1] min-w-0 flex flex-col rounded-lg bg-white/[0.02] border border-white/5 overflow-hidden">
               {queueSection}
             </div>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide flex flex-col gap-3">
+          {/* Bottom: 5/7 height — recommended + search */}
+          <div className="flex-[5] min-h-0 overflow-y-auto scrollbar-hide flex flex-col gap-3">
             {recommendedSection}
             {searchSection}
           </div>
