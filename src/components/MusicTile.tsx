@@ -62,7 +62,7 @@ export default function MusicTile({ music, expanded, onToggleExpand }: MusicTile
               {track.title}
             </ScrollingText>
             <ScrollingText className="text-[10px] text-gray-500 mt-0.5 min-h-[0.875rem]">
-              {track.artist}{track.album ? ` — ${track.album}` : ''}
+              {`${track.artist}${track.album ? ` — ${track.album}` : ''}`}
             </ScrollingText>
           </button>
         ) : track && !isPlaying ? (
