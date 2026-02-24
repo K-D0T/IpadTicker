@@ -1,0 +1,341 @@
+@import "tailwindcss";
+
+:root {
+  --color-background: #1a2030;
+  --color-foreground: #f9fafb;
+}
+
+[data-theme="light"] {
+  --color-background: #e8ecf4;
+  --color-foreground: #1e293b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+html {
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  transition: background-color 0.3s ease, color 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  overscroll-behavior: none;
+}
+
+/* ============================================
+   TILE CARDS — LED GLASS STYLE
+   ============================================ */
+.tile-card {
+  position: relative;
+  background: linear-gradient(
+    145deg,
+    rgba(0, 0, 0, 0.55) 0%,
+    rgba(10, 10, 20, 0.45) 50%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.875rem;
+  padding: 0.875rem 1rem;
+  backdrop-filter: blur(16px);
+  box-shadow:
+    0 0 30px rgba(255, 255, 255, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  overflow: hidden;
+}
+
+.tile-card:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 0 40px rgba(255, 255, 255, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .tile-card {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(248, 250, 252, 0.9) 50%,
+    rgba(255, 255, 255, 0.85) 100%
+  );
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 0 24px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="light"] .tile-card:hover {
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow:
+    0 0 32px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+}
+
+.tile-heading {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+}
+
+[data-theme="light"] .tile-heading {
+  color: #64748b;
+}
+
+/* Logo/icon panel behind team logos */
+.logo-icon-bg {
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.88) 50%, rgba(15, 23, 42, 0.92) 100%);
+}
+[data-theme="light"] .logo-icon-bg {
+  background: linear-gradient(160deg, rgba(226, 232, 240, 0.95) 0%, rgba(203, 213, 225, 0.9) 50%, rgba(226, 232, 240, 0.95) 100%);
+}
+
+/* Light mode: header and shared UI */
+[data-theme="light"] .header-title {
+  color: #475569;
+}
+
+[data-theme="light"] header button svg,
+[data-theme="light"] header .text-gray-600 {
+  color: #64748b;
+}
+
+[data-theme="light"] .led-dots {
+  background-image: radial-gradient(
+    circle at center,
+    rgba(0, 0, 0, 0.12) 0.6px,
+    transparent 0.6px
+  );
+}
+
+/* Theme pill in header (light mode) */
+[data-theme="light"] .theme-toggle-pill {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .theme-toggle-pill button {
+  color: #475569;
+}
+[data-theme="light"] .theme-toggle-pill button.bg-white\/20 {
+  background: rgba(0, 0, 0, 0.12);
+  color: #1e293b;
+}
+
+/* ============================================
+   LIVE GAME HERO BACKGROUND
+   ============================================ */
+.live-hero-bg {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(239, 68, 68, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 50%, rgba(251, 146, 60, 0.04) 0%, transparent 60%),
+    linear-gradient(145deg, rgba(0, 0, 0, 0.6) 0%, rgba(15, 5, 5, 0.5) 50%, rgba(0, 0, 0, 0.6) 100%);
+  box-shadow:
+    0 0 40px rgba(239, 68, 68, 0.06),
+    inset 0 0 60px rgba(239, 68, 68, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* ============================================
+   LED DOT-MATRIX OVERLAY
+   ============================================ */
+.led-dots {
+  background-image: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.65) 0.8px,
+    transparent 0.8px
+  );
+  background-size: 4px 4px;
+  mix-blend-mode: overlay;
+}
+/* Stronger grid in tile cards (widgets) */
+.tile-card .led-dots {
+  background-image: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.5) 0.9px,
+    transparent 0.9px
+  );
+  background-size: 5px 5px;
+}
+
+/* ============================================
+   BOTTOM TICKER — LED STYLE
+   ============================================ */
+.ticker-bar {
+  height: 38px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.7) 0%,
+    rgba(5, 5, 15, 0.6) 50%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 -4px 20px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="light"] .ticker-bar {
+  background: linear-gradient(
+    90deg,
+    rgba(241, 245, 249, 0.95) 0%,
+    rgba(248, 250, 252, 0.98) 50%,
+    rgba(241, 245, 249, 0.95) 100%
+  );
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* ============================================
+   SCOREBOARD TEXT GLOW
+   ============================================ */
+.score-glow {
+  text-shadow:
+    0 0 8px rgba(255, 255, 255, 0.25),
+    0 0 20px rgba(255, 255, 255, 0.08);
+}
+
+.score-glow-cyan {
+  text-shadow:
+    0 0 8px rgba(0, 200, 255, 0.35),
+    0 0 24px rgba(0, 200, 255, 0.12);
+}
+
+.score-glow-orange {
+  text-shadow:
+    0 0 8px rgba(255, 160, 50, 0.35),
+    0 0 24px rgba(255, 160, 50, 0.12);
+}
+
+.score-glow-green {
+  text-shadow:
+    0 0 8px rgba(50, 255, 130, 0.3),
+    0 0 20px rgba(50, 255, 130, 0.1);
+}
+
+/* ============================================
+   LED PULSE — LIVE INDICATOR
+   ============================================ */
+@keyframes ledPulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+.led-pulse {
+  animation: ledPulse 2s ease-in-out infinite;
+}
+
+@keyframes ledFlicker {
+  0%, 100% { opacity: 0.9; }
+  25% { opacity: 1; }
+  75% { opacity: 0.85; }
+}
+
+.led-flicker {
+  animation: ledFlicker 3s ease-in-out infinite;
+}
+
+/* ============================================
+   MARQUEE — SCROLLING TEXT (long song titles)
+   ============================================ */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 12s linear infinite;
+}
+
+/* ============================================
+   SCROLLBAR HIDE
+   ============================================ */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================
+   KIOSK MODE
+   ============================================ */
+.kiosk-mode {
+  cursor: none;
+}
+.kiosk-mode * {
+  scrollbar-width: none;
+}
+.kiosk-mode *::-webkit-scrollbar {
+  display: none;
+}
+
+/* ============================================
+   RANGE INPUT
+   ============================================ */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+  cursor: pointer;
+  border: none;
+}
+
+/* ============================================
+   TOUCH & PLATFORM
+   ============================================ */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@supports (padding: env(safe-area-inset-bottom)) {
+  .ticker-bar {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@media all and (display-mode: standalone) {
+  header {
+    padding-top: env(safe-area-inset-top, 0.75rem);
+  }
+}
