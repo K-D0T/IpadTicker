@@ -39,7 +39,7 @@ export default function ExpandedMusicPlayer({ music, onCollapse, compact = false
       transition={{ duration: 0.35, ease: 'easeInOut' }}
       className={`overflow-hidden h-full min-h-0 ${compact ? 'flex flex-col' : ''}`}
     >
-      <LedOverlay className={`rounded-xl bg-gradient-to-br from-green-950/30 via-black/50 to-emerald-950/20 border border-green-500/10 h-full min-h-0 flex flex-col ${compact ? 'p-3' : 'p-5'}`} intensity={0.06}>
+      <LedOverlay className={`rounded-xl bg-gradient-to-br from-green-950/30 via-black/50 to-emerald-950/20 border border-green-500/10 h-full min-h-0 flex flex-col ${compact ? 'p-3 min-h-[min(200px,26vh)]' : 'p-5'}`} intensity={0.06}>
         {!compact && (
           <button
             onClick={onCollapse}
@@ -60,7 +60,7 @@ export default function ExpandedMusicPlayer({ music, onCollapse, compact = false
             )}
           </button>
 
-          <div className={`flex-1 min-w-0 flex flex-col justify-between overflow-hidden ${compact ? 'min-h-[180px]' : 'h-[200px]'}`}>
+          <div className={`flex-1 min-w-0 flex flex-col justify-between overflow-hidden ${compact ? 'min-h-[min(180px,24vh)]' : 'h-[200px]'}`}>
             <div className="min-w-0">
               <ScrollingText className={`font-bold text-white tracking-wide score-glow-green block ${compact ? 'text-sm' : 'text-lg'}`}>
                 {track?.title || 'Nothing playing'}

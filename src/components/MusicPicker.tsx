@@ -314,10 +314,10 @@ export default function MusicPicker({ music, compactLayout = false }: { music: M
     return (
       <LedOverlay className="tile-card rounded-xl border border-white/10 flex flex-col overflow-hidden h-full" intensity={0.08}>
         <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
-          {/* Top row: 2/7 height. Now playing 3:1, queue 1:4 width */}
-          <div className="flex gap-3 min-h-0 flex-[2] overflow-hidden" style={{ minHeight: 0 }}>
+          {/* Top row: dynamic min height so now-playing box fits on iPad */}
+          <div className="flex gap-3 min-h-[min(220px,28vh)] flex-[2] overflow-hidden">
             <div className="flex-[3] min-w-0 min-h-0 overflow-hidden flex flex-col">
-              <div className="h-full min-h-0 overflow-hidden rounded-xl">
+              <div className="h-full min-h-0 overflow-hidden rounded-xl flex flex-col">
                 <ExpandedMusicPlayer music={music} onCollapse={() => {}} compact />
               </div>
             </div>
