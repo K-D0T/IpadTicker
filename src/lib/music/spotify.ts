@@ -21,7 +21,28 @@ export interface SpotifyTokens {
   expiresAt: number;
 }
 
-type CookieStore = { get: (name: string) => { value: string } | undefined };
+export type CookieStore = { get: (name: string) => { value: string } | undefined };
+
+/** Build a cookie store from a Request Cookie header (fallback when cookies() is empty in Route Handlers). */
+export function cookieStoreFromRequest(request: Request): CookieStore {
+  const header = request.headers.get('cookie');
+  const parsed: Record<string, string> = {};
+  if (header) {
+    for (const part of header.split(';')) {
+      const eq = part.indexOf('=');
+      if (eq === -1) continue;
+      const name = decodeURIComponent(part.slice(0, eq).trim());
+      const value = decodeURIComponent(part.slice(eq + 1).trim());
+      if (name) parsed[name] = value;
+    }
+  }
+  return {
+    get(name: string) {
+      const value = parsed[name];
+      return value !== undefined ? { value } : undefined;
+    },
+  };
+}
 
 const globalKey = '__spotify_tokens__' as const;
 const pendingKey = '__spotify_pending_cookie__' as const;
@@ -354,16 +375,17 @@ export class SpotifyMusicService implements MusicService {
         }
       }
     }
-    const params = new URLSearchParams({ limit: '15' });
+    const params = new URLSearchParams({ limit: '15', market: 'US' });
     if (seed) {
       params.set('seed_tracks', seed);
     } else {
       params.set('seed_genres', 'pop');
     }
-    const res = await spotifyFetch(`/recommendations?${params.toString()}`);
+    const url = `/recommendations?${params.toString()}`;
+    const res = await spotifyFetch(url);
     if (!res.ok) {
       const errText = await res.text();
-      console.warn('[Spotify] recommendations failed', res.status, errText.slice(0, 200));
+      console.warn('[Spotify] recommendations failed', res.status, url, errText.slice(0, 300));
       return [];
     }
     type RecommendationTrack = {
@@ -377,7 +399,8 @@ export class SpotifyMusicService implements MusicService {
     let data: { tracks?: RecommendationTrack[] };
     try {
       data = await res.json();
-    } catch {
+    } catch (e) {
+      console.warn('[Spotify] recommendations parse error', e);
       return [];
     }
     const items: RecommendationTrack[] = Array.isArray(data.tracks) ? data.tracks : [];

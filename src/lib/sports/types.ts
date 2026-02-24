@@ -7,6 +7,8 @@ export interface Team {
   abbr: string;
   logo?: string;
   score: number | null;
+  /** Poll/curated rank (e.g. AP Top 25), when available from API */
+  rank?: number;
 }
 
 export interface Game {
@@ -70,4 +72,16 @@ export function proxyLogoUrl(abbr: string, league: League): string {
   const raw = teamLogoUrl(abbr, league);
   if (!raw) return '';
   return `/api/img?url=${encodeURIComponent(raw)}`;
+}
+
+/** Team display with rank when available, e.g. "#18 North Carolina" or "North Carolina" */
+export function teamNameWithRank(team: Team): string {
+  if (team.rank != null) return `#${team.rank} ${team.name}`;
+  return team.name;
+}
+
+/** Abbreviation with rank when available, e.g. "#18 UNC" or "UNC" */
+export function teamAbbrWithRank(team: Team): string {
+  if (team.rank != null) return `#${team.rank} ${team.abbr}`;
+  return team.abbr;
 }

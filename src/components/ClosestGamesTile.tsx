@@ -2,7 +2,7 @@
 
 import { usePolling } from '@/hooks/usePolling';
 import { ScoreRowSkeleton } from './LoadingSkeleton';
-import { Game, League, leagueDisplayName, proxyLogoUrl } from '@/lib/sports/types';
+import { Game, League, leagueDisplayName, proxyLogoUrl, teamAbbrWithRank } from '@/lib/sports/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Trophy, Calendar, TrendingUp } from 'lucide-react';
 import LedOverlay from './LedOverlay';
@@ -64,8 +64,8 @@ function GameCard({ game, index, odds }: { game: Game; index: number; odds?: { a
       <div className="flex items-center justify-between gap-2 min-w-0">
         <div className="flex flex-col items-center gap-0.5 w-[4.5rem] shrink-0 min-w-0">
           <PixelLogo src={logoSrc(game.awayTeam, game.league)} size={38} pixelResolution={14} />
-          <span className={`text-[9px] font-bold tracking-wider truncate w-full text-center ${awayWon ? 'text-white' : 'text-gray-400'}`} title={game.awayTeam.abbr}>
-            {game.awayTeam.abbr}
+          <span className={`text-[9px] font-bold tracking-wider truncate w-full text-center ${awayWon ? 'text-white' : 'text-gray-400'}`} title={teamAbbrWithRank(game.awayTeam)}>
+            {teamAbbrWithRank(game.awayTeam)}
           </span>
         </div>
 
@@ -113,8 +113,8 @@ function GameCard({ game, index, odds }: { game: Game; index: number; odds?: { a
 
         <div className="flex flex-col items-center gap-0.5 w-[4.5rem] shrink-0 min-w-0">
           <PixelLogo src={logoSrc(game.homeTeam, game.league)} size={38} pixelResolution={14} />
-          <span className={`text-[9px] font-bold tracking-wider truncate w-full text-center ${homeWon ? 'text-white' : 'text-gray-400'}`} title={game.homeTeam.abbr}>
-            {game.homeTeam.abbr}
+          <span className={`text-[9px] font-bold tracking-wider truncate w-full text-center ${homeWon ? 'text-white' : 'text-gray-400'}`} title={teamAbbrWithRank(game.homeTeam)}>
+            {teamAbbrWithRank(game.homeTeam)}
           </span>
         </div>
       </div>
@@ -145,9 +145,9 @@ function UpcomingGameRow({ game }: { game: Game }) {
   return (
     <div className="flex items-center gap-2 py-1.5 px-2 rounded border border-transparent hover:bg-white/[0.02] min-w-0 overflow-hidden">
       <PixelLogo src={logoSrc(game.awayTeam, game.league)} size={28} pixelResolution={12} />
-      <span className="text-[10px] font-bold text-gray-400 w-10 min-w-0 truncate text-right shrink-0" title={game.awayTeam.abbr}>{game.awayTeam.abbr}</span>
+      <span className="text-[10px] font-bold text-gray-400 min-w-0 truncate text-right shrink-0" title={teamAbbrWithRank(game.awayTeam)}>{teamAbbrWithRank(game.awayTeam)}</span>
       <span className="text-[9px] text-gray-700 font-bold shrink-0">@</span>
-      <span className="text-[10px] font-bold text-gray-400 w-10 min-w-0 truncate shrink-0" title={game.homeTeam.abbr}>{game.homeTeam.abbr}</span>
+      <span className="text-[10px] font-bold text-gray-400 min-w-0 truncate shrink-0" title={teamAbbrWithRank(game.homeTeam)}>{teamAbbrWithRank(game.homeTeam)}</span>
       <PixelLogo src={logoSrc(game.homeTeam, game.league)} size={28} pixelResolution={12} />
       <span className="text-[9px] text-gray-600 ml-auto tabular-nums shrink-0">{time}</span>
     </div>

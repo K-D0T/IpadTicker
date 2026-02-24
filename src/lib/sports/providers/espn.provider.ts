@@ -47,6 +47,9 @@ function parseCompetition(event: any, league: League): Game {
   const away = competition?.competitors?.find((c: any) => c.homeAway === 'away');
   const statusDetail = competition?.status;
 
+  const homeRank = home?.curatedRank?.current != null ? Number(home.curatedRank.current) : undefined;
+  const awayRank = away?.curatedRank?.current != null ? Number(away.curatedRank.current) : undefined;
+
   return {
     id: String(event.id || Math.random()),
     league,
@@ -57,12 +60,14 @@ function parseCompetition(event: any, league: League): Game {
       abbr: home?.team?.abbreviation || '???',
       logo: extractLogo(home?.team),
       score: home?.score != null ? parseInt(String(home.score), 10) : null,
+      rank: homeRank,
     },
     awayTeam: {
       name: away?.team?.displayName || 'TBD',
       abbr: away?.team?.abbreviation || '???',
       logo: extractLogo(away?.team),
       score: away?.score != null ? parseInt(String(away.score), 10) : null,
+      rank: awayRank,
     },
     clock: statusDetail?.displayClock ?? null,
     period: statusDetail?.period ?? null,

@@ -2,7 +2,7 @@
 
 import { usePolling } from '@/hooks/usePolling';
 import { GameCardSkeleton } from './LoadingSkeleton';
-import { Game, League, proxyLogoUrl, leagueDisplayName } from '@/lib/sports/types';
+import { Game, League, proxyLogoUrl, leagueDisplayName, teamAbbrWithRank, teamNameWithRank } from '@/lib/sports/types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { MapPin, Zap } from 'lucide-react';
@@ -190,20 +190,20 @@ function UpcomingCard({ game, label, teamAbbr, solo }: {
       <div className="flex items-center gap-5 mb-3">
         <div className="flex flex-col items-center gap-1">
           <PixelLogo src={myLogo} size={solo ? 72 : 56} pixelResolution={solo ? 22 : 18} glow />
-          <span className="text-[10px] font-bold text-gray-300 tracking-wider">{myTeam.abbr}</span>
+          <span className="text-[10px] font-bold text-gray-300 tracking-wider">{teamAbbrWithRank(myTeam)}</span>
         </div>
 
         <span className="text-xs text-gray-700 font-bold tracking-widest">VS</span>
 
         <div className="flex flex-col items-center gap-1">
           <PixelLogo src={oppLogo} size={solo ? 72 : 56} pixelResolution={solo ? 22 : 18} />
-          <span className="text-[10px] font-bold text-gray-400 tracking-wider">{opponent.abbr}</span>
+          <span className="text-[10px] font-bold text-gray-400 tracking-wider">{teamAbbrWithRank(opponent)}</span>
         </div>
       </div>
 
-      {/* Opponent name */}
+      {/* Opponent name with rank */}
       <p className={`font-bold text-gray-200 text-center ${solo ? 'text-base' : 'text-sm'}`}>
-        vs {opponent.name}
+        vs {teamNameWithRank(opponent)}
       </p>
 
       {/* Date/time */}

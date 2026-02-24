@@ -147,7 +147,7 @@ export default function MusicPicker({ music, compactLayout = false }: { music: M
   const fetchRecommended = useCallback(async () => {
     setRecommendedLoading(true);
     try {
-      const res = await fetch('/api/music/recommendations');
+      const res = await fetch('/api/music/recommendations', { credentials: 'include' });
       const data = await res.json();
       setRecommended(Array.isArray(data.tracks) ? data.tracks : []);
     } catch {

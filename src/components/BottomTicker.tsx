@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Game } from '@/lib/sports/types';
+import { Game, teamNameWithRank, teamAbbrWithRank } from '@/lib/sports/types';
 
 interface TickerMessage {
   id: string;
@@ -44,7 +44,7 @@ export default function BottomTicker({ refreshInterval, razorbacksLeague, league
         if (ravensData.game) {
           const g: Game = ravensData.game;
           const isHome = g.homeTeam.abbr === 'BAL';
-          const opp = isHome ? g.awayTeam.name : g.homeTeam.name;
+          const opp = isHome ? teamNameWithRank(g.awayTeam) : teamNameWithRank(g.homeTeam);
           msgs.push({
             id: 'ravens-next',
             icon: '🏈',
@@ -79,7 +79,7 @@ export default function BottomTicker({ refreshInterval, razorbacksLeague, league
             msgs.push({
               id: `close-${league}`,
               icon: diff <= 3 ? '🔥' : '📺',
-              text: `Closest ${league.toUpperCase()}: ${g.awayTeam.abbr} ${g.awayTeam.score} @ ${g.homeTeam.abbr} ${g.homeTeam.score} (${g.clock || ''} P${g.period || ''})`,
+              text: `Closest ${league.toUpperCase()}: ${teamAbbrWithRank(g.awayTeam)} ${g.awayTeam.score} @ ${teamAbbrWithRank(g.homeTeam)} ${g.homeTeam.score} (${g.clock || ''} P${g.period || ''})`,
             });
           }
         } catch { /* skip */ }
