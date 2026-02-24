@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useSettings } from '@/hooks/useSettings';
 import { useMusicPlayer } from '@/hooks/useMusicPlayer';
@@ -12,7 +12,6 @@ import BottomTicker from './BottomTicker';
 import SettingsDrawer from './SettingsDrawer';
 import ExpandedMusicPlayer from './ExpandedMusicPlayer';
 import ThemeSync from './ThemeSync';
-import AppleTVRemote from './AppleTVRemote';
 import { Settings, Sun, Moon } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -20,20 +19,7 @@ export default function Dashboard() {
   const { settings, setSettings, loaded } = useSettings();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [musicExpanded, setMusicExpanded] = useState(false);
-  const [page, setPage] = useState(0);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const music = useMusicPlayer();
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      const index = Math.round(el.scrollLeft / el.clientWidth);
-      setPage(Math.min(index, 1));
-    };
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => el.removeEventListener('scroll', onScroll);
-  }, []);
 
   if (!loaded) {
     return (
@@ -97,64 +83,47 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Page indicator dots */}
-      <div className="flex justify-center gap-1.5 py-1 shrink-0">
-        <span className={`inline-block w-1.5 h-1.5 rounded-full transition-colors ${page === 0 ? 'bg-gray-400' : 'bg-gray-600'}`} aria-hidden />
-        <span className={`inline-block w-1.5 h-1.5 rounded-full transition-colors ${page === 1 ? 'bg-gray-400' : 'bg-gray-600'}`} aria-hidden />
-      </div>
-
-      {/* Swipeable pages: Dashboard (page 0) | Apple TV (page 1) */}
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden scrollbar-hide snap-x snap-mandatory flex" style={{ WebkitOverflowScrolling: 'touch' }}>
-        {/* Page 0: Dashboard */}
-        <div className="min-w-full w-full flex-shrink-0 flex flex-col min-h-0 snap-start">
-          <main className="flex-1 flex flex-col gap-2 px-3 pb-1.5 min-h-0">
-            <div className="flex-1 grid grid-cols-2 gap-2 min-h-0">
-              <div className="flex flex-col gap-2 min-h-0 overflow-hidden">
-                <AnimatePresence>
-                  {musicExpanded && canExpand && (
-                    <ExpandedMusicPlayer
-                      key="expanded-music"
-                      music={music}
-                      onCollapse={() => setMusicExpanded(false)}
-                    />
-                  )}
-                </AnimatePresence>
-                <div className={`flex-1 min-h-0 ${musicExpanded && canExpand ? 'overflow-y-auto scrollbar-hide' : ''}`}>
-                  <NextGameTile
-                    refreshInterval={settings.refreshInterval}
-                    razorbacksLeague={settings.razorbacksSport}
-                    selectedLeagues={settings.selectedLeagues}
-                  />
-                </div>
-              </div>
-              <ClosestGamesTile
-                leagues={settings.selectedLeagues}
+      {/* Main content */}
+      <main className="flex-1 flex flex-col gap-2 px-3 pb-1.5 min-h-0">
+        <div className="flex-1 grid grid-cols-2 gap-2 min-h-0">
+          <div className="flex flex-col gap-2 min-h-0 overflow-hidden">
+            <AnimatePresence>
+              {musicExpanded && canExpand && (
+                <ExpandedMusicPlayer
+                  key="expanded-music"
+                  music={music}
+                  onCollapse={() => setMusicExpanded(false)}
+                />
+              )}
+            </AnimatePresence>
+            <div className={`flex-1 min-h-0 ${musicExpanded && canExpand ? 'overflow-y-auto scrollbar-hide' : ''}`}>
+              <NextGameTile
                 refreshInterval={settings.refreshInterval}
+                razorbacksLeague={settings.razorbacksSport}
+                selectedLeagues={settings.selectedLeagues}
               />
             </div>
-            <div className="shrink-0 grid grid-cols-[1fr_auto] gap-2 items-stretch">
-              <MusicTile
-                music={music}
-                expanded={musicExpanded}
-                onToggleExpand={() => setMusicExpanded((prev) => canExpand ? !prev : false)}
-              />
-              <ExtrasTile />
-            </div>
-          </main>
-          <BottomTicker
-            refreshInterval={settings.refreshInterval}
-            razorbacksLeague={settings.razorbacksSport}
+          </div>
+          <ClosestGamesTile
             leagues={settings.selectedLeagues}
+            refreshInterval={settings.refreshInterval}
           />
-          <p className="text-[9px] text-gray-600 text-center py-1 tracking-wider">Swipe left for Apple TV</p>
         </div>
+        <div className="shrink-0 grid grid-cols-[1fr_auto] gap-2 items-stretch">
+          <MusicTile
+            music={music}
+            expanded={musicExpanded}
+            onToggleExpand={() => setMusicExpanded((prev) => canExpand ? !prev : false)}
+          />
+          <ExtrasTile />
+        </div>
+      </main>
 
-        {/* Page 1: Apple TV Remote */}
-        <div className="min-w-full w-full flex-shrink-0 flex flex-col min-h-0 snap-start justify-center items-center px-4">
-          <AppleTVRemote />
-          <p className="text-[10px] text-gray-500 mt-2 tracking-wider">Swipe right to return</p>
-        </div>
-      </div>
+      <BottomTicker
+        refreshInterval={settings.refreshInterval}
+        razorbacksLeague={settings.razorbacksSport}
+        leagues={settings.selectedLeagues}
+      />
 
       <SettingsDrawer
         open={drawerOpen}
