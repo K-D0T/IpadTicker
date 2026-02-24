@@ -6,6 +6,7 @@ export interface MusicService {
   control(req: MusicControlRequest): Promise<void>;
   searchTracks(q: string, limit?: number): Promise<SearchTrack[]>;
   addToQueue(uri: string): Promise<void>;
+  playTrack(uri: string): Promise<void>;
   getQueue(): Promise<SearchTrack[]>;
   getRecommendations(seedTrackId?: string | null): Promise<SearchTrack[]>;
 }
@@ -24,6 +25,10 @@ export class StubMusicService implements MusicService {
   }
 
   async addToQueue(): Promise<void> {
+    throw new Error('Music service not configured. Connect Spotify first.');
+  }
+
+  async playTrack(): Promise<void> {
     throw new Error('Music service not configured. Connect Spotify first.');
   }
 

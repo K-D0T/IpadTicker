@@ -298,6 +298,19 @@ export class SpotifyMusicService implements MusicService {
     }
   }
 
+  async playTrack(uri: string): Promise<void> {
+    if (!uri.trim()) return;
+    const res = await spotifyFetch('/me/player/play', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uris: [uri.trim()] }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || 'Failed to play track');
+    }
+  }
+
   async getQueue(): Promise<SearchTrack[]> {
     const res = await spotifyFetch('/me/player/queue');
     if (res.status === 204 || !res.ok) return [];

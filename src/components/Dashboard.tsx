@@ -22,32 +22,30 @@ export default function Dashboard() {
   const [musicExpanded, setMusicExpanded] = useState(false);
   const [page, setPage] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dashboardPanelRef = useRef<HTMLDivElement>(null);
   const musicPanelRef = useRef<HTMLDivElement>(null);
   const music = useMusicPlayer();
 
-  const syncPageFromScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const w = el.clientWidth || el.offsetWidth;
-    if (w <= 0) return;
-    const index = Math.round(el.scrollLeft / w);
-    setPage(Math.min(Math.max(0, index), 1));
-  }, []);
-
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const onScroll = () => requestAnimationFrame(syncPageFromScroll);
-    const onTouchEnd = () => {
-      requestAnimationFrame(syncPageFromScroll);
-    };
-    el.addEventListener('scroll', onScroll, { passive: true });
-    el.addEventListener('touchend', onTouchEnd, { passive: true });
-    return () => {
-      el.removeEventListener('scroll', onScroll);
-      el.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [syncPageFromScroll]);
+    const root = scrollRef.current;
+    const panel0 = dashboardPanelRef.current;
+    const panel1 = musicPanelRef.current;
+    if (!root || !panel0 || !panel1) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.intersectionRatio >= 0.5) {
+            setPage(entry.target === panel0 ? 0 : 1);
+            break;
+          }
+        }
+      },
+      { root, rootMargin: '0px', threshold: [0.25, 0.5, 0.75, 1] }
+    );
+    observer.observe(panel0);
+    observer.observe(panel1);
+    return () => observer.disconnect();
+  }, []);
 
   const scrollToPage = (index: number) => {
     if (index === 1 && musicPanelRef.current) {
@@ -151,7 +149,7 @@ export default function Dashboard() {
 
       {/* Swipeable: Dashboard (0) | Music (1) */}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden scrollbar-hide snap-x snap-mandatory flex" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="min-w-full w-full flex-shrink-0 flex flex-col min-h-0 snap-start">
+        <div ref={dashboardPanelRef} className="min-w-full w-full flex-shrink-0 flex flex-col min-h-0 snap-start" style={{ minWidth: '100%', width: '100%' }}>
           <main className="flex-1 flex flex-col gap-2 px-3 pb-1.5 min-h-0">
             <div className="flex-1 grid grid-cols-2 gap-2 min-h-0">
               <div className="flex flex-col gap-2 min-h-0 overflow-hidden">
@@ -199,14 +197,8 @@ export default function Dashboard() {
           className="min-w-full w-full flex-shrink-0 flex flex-col min-h-0 snap-start px-3 pb-2 gap-2"
           style={{ minWidth: '100%', width: '100%' }}
         >
-          <div className="shrink-0">
-            <ExpandedMusicPlayer
-              music={music}
-              onCollapse={() => setMusicExpanded(false)}
-            />
-          </div>
           <div className="flex-1 min-h-0 flex flex-col">
-            <MusicPicker music={music} />
+            <MusicPicker music={music} compactLayout />
           </div>
           <p className="text-[10px] text-gray-500 shrink-0 text-center tracking-wider">Swipe right or tap Dashboard to return</p>
         </div>
