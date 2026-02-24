@@ -4,7 +4,7 @@ import { usePolling } from '@/hooks/usePolling';
 import { ScoreRowSkeleton } from './LoadingSkeleton';
 import { Game, League, leagueDisplayName, proxyLogoUrl } from '@/lib/sports/types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Trophy, Calendar } from 'lucide-react';
+import { Flame, Trophy, Calendar, TrendingUp } from 'lucide-react';
 import LedOverlay from './LedOverlay';
 import PixelLogo from './PixelLogo';
 
@@ -13,9 +13,17 @@ interface ClosestGamesTileProps {
   refreshInterval: number;
 }
 
-interface CloseGamesResponse { games: Game[]; }
+interface CloseWithOddsResponse {
+  games: Game[];
+  oddsByGameId: Record<string, { awayML: number; homeML: number }>;
+}
 interface UpcomingDay { date: string; label: string; games: Game[]; }
 interface UpcomingResponse { upcoming: UpcomingDay[]; }
+
+function formatAmerican(price: number): string {
+  if (price > 0) return `+${price}`;
+  return `${price}`;
+}
 
 function logoSrc(team: { abbr: string; logo?: string }, league: League): string {
   if (team.logo) return `/api/img?url=${encodeURIComponent(team.logo)}`;
@@ -30,7 +38,7 @@ function isToday(dateStr: string): boolean {
     && d.getDate() === now.getDate();
 }
 
-function GameCard({ game, index }: { game: Game; index: number }) {
+function GameCard({ game, index, odds }: { game: Game; index: number; odds?: { awayML: number; homeML: number } }) {
   const isLive = game.status === 'live';
   const isFinal = game.status === 'final';
   const isPre = game.status === 'pre';
@@ -110,6 +118,24 @@ function GameCard({ game, index }: { game: Game; index: number }) {
           </span>
         </div>
       </div>
+      {odds && (
+        <div className="mt-1.5 pt-1.5 border-t border-white/5 flex items-center justify-center gap-1.5 flex-wrap">
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-cyan-500/15 border border-cyan-500/25 text-[8px] font-bold text-cyan-400 uppercase tracking-wider shadow-[0_0_8px_rgba(34,211,238,0.15)]">
+            <TrendingUp className="w-2.5 h-2.5" />
+            ML
+          </span>
+          <span className="text-[8px] text-gray-500 font-medium">DraftKings</span>
+          <span className={`tabular-nums font-bold text-[10px] min-w-[2.5rem] text-right ${odds.awayML > 0 ? 'text-emerald-400' : 'text-gray-400'}`}>
+            {formatAmerican(odds.awayML)}
+          </span>
+          <span className="text-gray-600 text-[9px]">A</span>
+          <span className="text-gray-600">·</span>
+          <span className={`tabular-nums font-bold text-[10px] min-w-[2.5rem] text-right ${odds.homeML > 0 ? 'text-emerald-400' : 'text-gray-400'}`}>
+            {formatAmerican(odds.homeML)}
+          </span>
+          <span className="text-gray-600 text-[9px]">H</span>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -129,43 +155,22 @@ function UpcomingGameRow({ game }: { game: Game }) {
 }
 
 export default function ClosestGamesTile({ leagues, refreshInterval }: ClosestGamesTileProps) {
-  const todayGames = usePolling<Game[]>({
+  const closeWithOdds = usePolling<CloseWithOddsResponse>({
     fetcher: async () => {
-      const promises = leagues.map((league) =>
-        fetch(`/api/sports/close?league=${league}&limit=8`)
-          .then((r) => r.json())
-          .then((d: CloseGamesResponse) => d.games || [])
-      );
-      const results = await Promise.all(promises);
-      const flat = results.flat();
-      const live = flat.filter((g) => g.status === 'live');
-
-      if (live.length > 0) {
-        return live
-          .sort((a, b) => {
-            const diffA = Math.abs((a.homeTeam.score ?? 0) - (a.awayTeam.score ?? 0));
-            const diffB = Math.abs((b.homeTeam.score ?? 0) - (b.awayTeam.score ?? 0));
-            return diffA - diffB;
-          })
-          .slice(0, 6);
-      }
-
-      const today = flat.filter((g) => {
-        if (g.status === 'final') return isToday(g.startTime);
-        if (g.status === 'pre') return isToday(g.startTime);
-        return true;
-      });
-
-      return today
-        .sort((a, b) => {
-          if (a.status === 'final' && b.status !== 'final') return -1;
-          if (a.status !== 'final' && b.status === 'final') return 1;
-          return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
-        })
-        .slice(0, 6);
+      const res = await fetch(`/api/sports/close-with-odds?leagues=${leagues.join(',')}&limit=8`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Failed to load games');
+      return { games: data.games ?? [], oddsByGameId: data.oddsByGameId ?? {} };
     },
     interval: refreshInterval,
   });
+
+  const todayGames = {
+    data: closeWithOdds.data?.games ?? null,
+    loading: closeWithOdds.loading,
+    error: closeWithOdds.error,
+  };
+  const oddsByGameId = closeWithOdds.data?.oddsByGameId ?? {};
 
   const upcomingDays = usePolling<UpcomingDay[]>({
     fetcher: async () => {
@@ -202,7 +207,7 @@ export default function ClosestGamesTile({ leagues, refreshInterval }: ClosestGa
           <div className="space-y-0.5">
             <AnimatePresence mode="popLayout">
               {todayGames.data!.map((game, i) => (
-                <GameCard key={game.id} game={game} index={i} />
+                <GameCard key={game.id} game={game} index={i} odds={oddsByGameId[game.id]} />
               ))}
             </AnimatePresence>
           </div>

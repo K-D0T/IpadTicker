@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exchangeCode } from '@/lib/music/spotify';
+import { exchangeCode, getSpotifyCookieHeaders } from '@/lib/music/spotify';
+
+const secure = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
 
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code');
@@ -19,7 +21,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    await exchangeCode(code);
+    const tokens = await exchangeCode(code);
+    const headers = new Headers({ 'Content-Type': 'text/html' });
+    getSpotifyCookieHeaders(tokens, secure).forEach((value) => headers.append('Set-Cookie', value));
     return new NextResponse(
       `<html><body style="background:#020408;color:#22c55e;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh">
         <div style="text-align:center">
@@ -28,7 +32,7 @@ export async function GET(request: NextRequest) {
           <script>setTimeout(()=>window.location.href='/',1500)</script>
         </div>
       </body></html>`,
-      { headers: { 'Content-Type': 'text/html' } },
+      { headers },
     );
   } catch (err) {
     console.error('[Spotify Callback]', err);

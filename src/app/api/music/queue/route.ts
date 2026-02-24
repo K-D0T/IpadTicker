@@ -2,27 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { runWithCookiesAsync, getPendingCookieUpdate, getSpotifyCookieHeaders } from '@/lib/music/spotify';
 import { getMusicService } from '@/lib/music/musicService';
-import { MusicAction } from '@/lib/music/types';
 
-const VALID_ACTIONS: MusicAction[] = ['play', 'pause', 'next', 'prev', 'volume'];
 const secure = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
 
 export async function POST(request: NextRequest) {
+  let body: { uri?: string };
   try {
-    const body = await request.json();
-    const { action, value } = body;
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+  const uri = typeof body?.uri === 'string' ? body.uri.trim() : '';
+  if (!uri) {
+    return NextResponse.json({ error: 'Missing uri (e.g. spotify:track:xxx)' }, { status: 400 });
+  }
+  if (!uri.startsWith('spotify:track:')) {
+    return NextResponse.json({ error: 'uri must be spotify:track:...' }, { status: 400 });
+  }
 
-    if (!action || !VALID_ACTIONS.includes(action)) {
-      return NextResponse.json(
-        { error: `Invalid action. Use one of: ${VALID_ACTIONS.join(', ')}` },
-        { status: 400 },
-      );
-    }
-
-    const cookieStore = await cookies();
+  const cookieStore = await cookies();
+  try {
     await runWithCookiesAsync(cookieStore, async () => {
       const service = getMusicService();
-      await service.control({ action, value });
+      await service.addToQueue(uri);
     });
     const res = NextResponse.json({ ok: true });
     const pending = getPendingCookieUpdate();
@@ -31,10 +33,10 @@ export async function POST(request: NextRequest) {
     }
     return res;
   } catch (err) {
-    console.error('[API /music/control]', err);
+    console.error('[API /music/queue]', err);
     return NextResponse.json(
-      { error: 'Music service not configured (501)' },
-      { status: 501 },
+      { error: err instanceof Error ? err.message : 'Failed to add to queue' },
+      { status: 502 },
     );
   }
 }

@@ -1,29 +1,70 @@
-import { NowPlaying, MusicControlRequest } from './types';
+import { NowPlaying, MusicControlRequest, SearchTrack } from './types';
 import { MusicService } from './musicService';
 import * as fs from 'fs';
 import * as path from 'path';
+import { AsyncLocalStorage } from 'async_hooks';
 
 const TOKEN_ENDPOINT = 'https://accounts.spotify.com/api/token';
 const API_BASE = 'https://api.spotify.com/v1';
 const TOKEN_FILE = path.join(process.cwd(), '.spotify-tokens.json');
 
-interface SpotifyTokens {
+const COOKIE_REFRESH = 'spotify_refresh';
+const COOKIE_ACCESS = 'spotify_access';
+const COOKIE_EXPIRES = 'spotify_expires';
+const COOKIE_OPTS = 'Path=/; HttpOnly; SameSite=Lax; Max-Age=';
+const REFRESH_MAX_AGE = 365 * 24 * 60 * 60; // 1 year
+const ACCESS_MAX_AGE = 55 * 60; // 55 min (refresh before 1h)
+
+export interface SpotifyTokens {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
 }
 
-// Survive Next.js HMR by storing on globalThis
+type CookieStore = { get: (name: string) => { value: string } | undefined };
+
 const globalKey = '__spotify_tokens__' as const;
+const pendingKey = '__spotify_pending_cookie__' as const;
 declare global {
   // eslint-disable-next-line no-var
   var __spotify_tokens__: SpotifyTokens | null | undefined;
+  // eslint-disable-next-line no-var
+  var __spotify_pending_cookie__: SpotifyTokens | null | undefined;
+}
+
+const spotifyStorage = new AsyncLocalStorage<{ cookies: CookieStore }>();
+
+export function runWithCookies<T>(cookies: CookieStore, fn: () => T): T {
+  return spotifyStorage.run({ cookies }, fn);
+}
+
+/** Use for async handlers so the whole promise runs inside cookie context. */
+export function runWithCookiesAsync<T>(cookies: CookieStore, fn: () => Promise<T>): Promise<T> {
+  return spotifyStorage.run({ cookies }, () => fn());
+}
+
+export function getPendingCookieUpdate(): SpotifyTokens | null {
+  const v = globalThis[pendingKey] ?? null;
+  globalThis[pendingKey] = undefined;
+  return v;
 }
 
 function getTokens(): SpotifyTokens | null {
   if (globalThis[globalKey]) return globalThis[globalKey]!;
 
-  // Try loading from disk on cold start
+  const store = spotifyStorage.getStore();
+  if (store?.cookies) {
+    const refresh = store.cookies.get(COOKIE_REFRESH)?.value;
+    if (!refresh) return null;
+    const access = store.cookies.get(COOKIE_ACCESS)?.value;
+    const expiresStr = store.cookies.get(COOKIE_EXPIRES)?.value;
+    const expiresAt = expiresStr ? parseInt(expiresStr, 10) : 0;
+    if (access && expiresAt > Date.now() + 60000) {
+      return { accessToken: access, refreshToken: refresh, expiresAt };
+    }
+    return { accessToken: '', refreshToken: refresh, expiresAt: 0 };
+  }
+
   try {
     if (fs.existsSync(TOKEN_FILE)) {
       const raw = fs.readFileSync(TOKEN_FILE, 'utf-8');
@@ -33,7 +74,7 @@ function getTokens(): SpotifyTokens | null {
         return parsed;
       }
     }
-  } catch { /* ignore corrupt file */ }
+  } catch { /* ignore */ }
 
   return null;
 }
@@ -45,11 +86,24 @@ function saveTokens(t: SpotifyTokens) {
   } catch (err) {
     console.warn('[Spotify] Could not persist tokens to disk:', err);
   }
+  const store = spotifyStorage.getStore();
+  if (store?.cookies) {
+    globalThis[pendingKey] = t;
+  }
 }
 
 function getClientId() { return process.env.SPOTIFY_CLIENT_ID || ''; }
 function getClientSecret() { return process.env.SPOTIFY_CLIENT_SECRET || ''; }
 function getRedirectUri() { return process.env.SPOTIFY_REDIRECT_URI || 'http://localhost:3000/api/music/callback'; }
+
+function tokenCookies(t: SpotifyTokens, secure = false): string[] {
+  const secureFlag = secure ? '; Secure' : '';
+  return [
+    `${COOKIE_REFRESH}=${encodeURIComponent(t.refreshToken)}; ${COOKIE_OPTS}${REFRESH_MAX_AGE}${secureFlag}`,
+    `${COOKIE_ACCESS}=${encodeURIComponent(t.accessToken)}; ${COOKIE_OPTS}${ACCESS_MAX_AGE}${secureFlag}`,
+    `${COOKIE_EXPIRES}=${t.expiresAt}; ${COOKIE_OPTS}${ACCESS_MAX_AGE}${secureFlag}`,
+  ];
+}
 
 export function getSpotifyAuthUrl(): string {
   const scopes = [
@@ -156,6 +210,11 @@ export function setTokens(t: SpotifyTokens) {
   saveTokens(t);
 }
 
+/** Returns Set-Cookie header values (one per cookie) for the response. */
+export function getSpotifyCookieHeaders(tokens: SpotifyTokens, secure = false): string[] {
+  return tokenCookies(tokens, secure);
+}
+
 export class SpotifyMusicService implements MusicService {
   async getNowPlaying(): Promise<NowPlaying | null> {
     const res = await spotifyFetch('/me/player/currently-playing');
@@ -197,6 +256,45 @@ export class SpotifyMusicService implements MusicService {
           await spotifyFetch(`/me/player/volume?volume_percent=${req.value}`, { method: 'PUT' });
         }
         break;
+    }
+  }
+
+  async searchTracks(q: string, limit = 20): Promise<SearchTrack[]> {
+    if (!q.trim()) return [];
+    const params = new URLSearchParams({
+      q: q.trim(),
+      type: 'track',
+      limit: String(Math.min(limit, 30)),
+    });
+    const res = await spotifyFetch(`/search?${params.toString()}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    const items = data.tracks?.items ?? [];
+    return items.map((t: {
+      id: string;
+      uri: string;
+      name: string;
+      artists: { name: string }[];
+      album: { name: string; images?: { url: string }[] };
+      duration_ms: number;
+    }) => ({
+      id: t.id,
+      uri: t.uri,
+      name: t.name || 'Unknown',
+      artist: t.artists?.map((a) => a.name).join(', ') || 'Unknown',
+      album: t.album?.name || '',
+      albumArtUrl: t.album?.images?.[0]?.url ?? null,
+      durationMs: t.duration_ms ?? 0,
+    }));
+  }
+
+  async addToQueue(uri: string): Promise<void> {
+    if (!uri.trim()) return;
+    const encoded = encodeURIComponent(uri.trim());
+    const res = await spotifyFetch(`/me/player/queue?uri=${encoded}`, { method: 'POST' });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || 'Failed to add to queue');
     }
   }
 }

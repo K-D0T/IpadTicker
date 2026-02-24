@@ -21,3 +21,13 @@ export interface MusicControlRequest {
   action: MusicAction;
   value?: number; // for volume 0-100
 }
+
+export interface SearchTrack {
+  id: string;
+  uri: string;
+  name: string;
+  artist: string;
+  album: string;
+  albumArtUrl: string | null;
+  durationMs: number;
+}

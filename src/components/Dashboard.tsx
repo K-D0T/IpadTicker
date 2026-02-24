@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useSettings } from '@/hooks/useSettings';
 import { useMusicPlayer } from '@/hooks/useMusicPlayer';
@@ -11,6 +11,7 @@ import ExtrasTile from './ExtrasTile';
 import BottomTicker from './BottomTicker';
 import SettingsDrawer from './SettingsDrawer';
 import ExpandedMusicPlayer from './ExpandedMusicPlayer';
+import MusicPicker from './MusicPicker';
 import ThemeSync from './ThemeSync';
 import { Settings, Sun, Moon } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -19,7 +20,38 @@ export default function Dashboard() {
   const { settings, setSettings, loaded } = useSettings();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [musicExpanded, setMusicExpanded] = useState(false);
+  const [page, setPage] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const musicPanelRef = useRef<HTMLDivElement>(null);
   const music = useMusicPlayer();
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const w = el.clientWidth;
+      if (w <= 0) return;
+      const index = Math.round(el.scrollLeft / w);
+      setPage(Math.min(index, 1));
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const scrollToPage = (index: number) => {
+    if (index === 1 && musicPanelRef.current) {
+      musicPanelRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+      setPage(1);
+      return;
+    }
+    const el = scrollRef.current;
+    if (!el) return;
+    const w = el.clientWidth || el.offsetWidth;
+    if (w > 0) {
+      el.scrollTo({ left: index * w, behavior: 'smooth' });
+      setPage(index);
+    }
+  };
 
   if (!loaded) {
     return (
@@ -83,47 +115,91 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 flex flex-col gap-2 px-3 pb-1.5 min-h-0">
-        <div className="flex-1 grid grid-cols-2 gap-2 min-h-0">
-          <div className="flex flex-col gap-2 min-h-0 overflow-hidden">
-            <AnimatePresence>
-              {musicExpanded && canExpand && (
-                <ExpandedMusicPlayer
-                  key="expanded-music"
-                  music={music}
-                  onCollapse={() => setMusicExpanded(false)}
-                />
-              )}
-            </AnimatePresence>
-            <div className={`flex-1 min-h-0 ${musicExpanded && canExpand ? 'overflow-y-auto scrollbar-hide' : ''}`}>
-              <NextGameTile
+      {/* Page indicator: tappable Dashboard | Music */}
+      <div className="flex justify-center items-center gap-2 py-2 shrink-0 border-b border-white/5">
+        <button
+          type="button"
+          onClick={() => scrollToPage(0)}
+          className={`text-[11px] font-bold uppercase tracking-wider transition-colors touch-manipulation px-4 py-2 rounded-lg ${
+            page === 0 ? 'text-white bg-white/15' : 'text-gray-500 hover:text-gray-400 hover:bg-white/5'
+          }`}
+        >
+          Dashboard
+        </button>
+        <button
+          type="button"
+          onClick={() => scrollToPage(1)}
+          className={`text-[11px] font-bold uppercase tracking-wider transition-colors touch-manipulation px-4 py-2 rounded-lg flex items-center gap-2 ${
+            page === 1 ? 'text-green-400 bg-green-500/25 border border-green-500/30' : 'text-gray-500 hover:text-green-400 hover:bg-green-500/10 border border-transparent'
+          }`}
+        >
+          <span className={`w-2 h-2 rounded-full shrink-0 ${page === 1 ? 'bg-green-400' : 'bg-gray-600'}`} />
+          Music &amp; Queue
+        </button>
+      </div>
+
+      {/* Swipeable: Dashboard (0) | Music (1) */}
+      <div ref={scrollRef} className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden scrollbar-hide snap-x snap-mandatory flex" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="min-w-full w-full flex-shrink-0 flex flex-col min-h-0 snap-start">
+          <main className="flex-1 flex flex-col gap-2 px-3 pb-1.5 min-h-0">
+            <div className="flex-1 grid grid-cols-2 gap-2 min-h-0">
+              <div className="flex flex-col gap-2 min-h-0 overflow-hidden">
+                <AnimatePresence>
+                  {musicExpanded && canExpand && (
+                    <ExpandedMusicPlayer
+                      key="expanded-music"
+                      music={music}
+                      onCollapse={() => setMusicExpanded(false)}
+                    />
+                  )}
+                </AnimatePresence>
+                <div className={`flex-1 min-h-0 ${musicExpanded && canExpand ? 'overflow-y-auto scrollbar-hide' : ''}`}>
+                  <NextGameTile
+                    refreshInterval={settings.refreshInterval}
+                    razorbacksLeague={settings.razorbacksSport}
+                    selectedLeagues={settings.selectedLeagues}
+                  />
+                </div>
+              </div>
+              <ClosestGamesTile
+                leagues={settings.selectedLeagues}
                 refreshInterval={settings.refreshInterval}
-                razorbacksLeague={settings.razorbacksSport}
-                selectedLeagues={settings.selectedLeagues}
               />
             </div>
-          </div>
-          <ClosestGamesTile
-            leagues={settings.selectedLeagues}
+            <div className="shrink-0 grid grid-cols-[1fr_auto] gap-2 items-stretch">
+              <MusicTile
+                music={music}
+                expanded={musicExpanded}
+                onToggleExpand={() => setMusicExpanded((prev) => canExpand ? !prev : false)}
+              />
+              <ExtrasTile />
+            </div>
+          </main>
+          <BottomTicker
             refreshInterval={settings.refreshInterval}
+            razorbacksLeague={settings.razorbacksSport}
+            leagues={settings.selectedLeagues}
           />
+          <p className="text-[9px] text-gray-600 text-center py-1 tracking-wider">Tap &quot;Music &amp; Queue&quot; above or swipe left</p>
         </div>
-        <div className="shrink-0 grid grid-cols-[1fr_auto] gap-2 items-stretch">
-          <MusicTile
-            music={music}
-            expanded={musicExpanded}
-            onToggleExpand={() => setMusicExpanded((prev) => canExpand ? !prev : false)}
-          />
-          <ExtrasTile />
-        </div>
-      </main>
 
-      <BottomTicker
-        refreshInterval={settings.refreshInterval}
-        razorbacksLeague={settings.razorbacksSport}
-        leagues={settings.selectedLeagues}
-      />
+        <div
+          ref={musicPanelRef}
+          className="min-w-full w-full flex-shrink-0 flex flex-col min-h-0 snap-start px-3 pb-2 gap-2"
+          style={{ minWidth: '100%', width: '100%' }}
+        >
+          <div className="shrink-0">
+            <ExpandedMusicPlayer
+              music={music}
+              onCollapse={() => setMusicExpanded(false)}
+            />
+          </div>
+          <div className="flex-1 min-h-0 flex flex-col">
+            <MusicPicker music={music} />
+          </div>
+          <p className="text-[10px] text-gray-500 shrink-0 text-center tracking-wider">Swipe right or tap Dashboard to return</p>
+        </div>
+      </div>
 
       <SettingsDrawer
         open={drawerOpen}
