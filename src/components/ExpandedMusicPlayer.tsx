@@ -28,8 +28,8 @@ export default function ExpandedMusicPlayer({ music, onCollapse, compact = false
   const artSrc = track?.albumArtUrl ? `/api/img?url=${encodeURIComponent(track.albumArtUrl)}` : '';
   const progress = track ? (track.durationMs > 0 ? (track.progressMs / track.durationMs) * 100 : 0) : 0;
 
-  const artSize = compact ? 72 : 140;
-  const resolution = compact ? 18 : 28;
+  const artSize = compact ? 120 : 140;
+  const resolution = compact ? 24 : 28;
 
   return (
     <motion.div
@@ -37,9 +37,9 @@ export default function ExpandedMusicPlayer({ music, onCollapse, compact = false
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: 0.35, ease: 'easeInOut' }}
-      className="overflow-hidden"
+      className={`overflow-hidden h-full min-h-0 ${compact ? 'flex flex-col' : ''}`}
     >
-      <LedOverlay className={`rounded-xl bg-gradient-to-br from-green-950/30 via-black/50 to-emerald-950/20 border border-green-500/10 ${compact ? 'p-3' : 'p-5'}`} intensity={0.06}>
+      <LedOverlay className={`rounded-xl bg-gradient-to-br from-green-950/30 via-black/50 to-emerald-950/20 border border-green-500/10 h-full min-h-0 flex flex-col ${compact ? 'p-3' : 'p-5'}`} intensity={0.06}>
         {!compact && (
           <button
             onClick={onCollapse}
@@ -49,18 +49,18 @@ export default function ExpandedMusicPlayer({ music, onCollapse, compact = false
           </button>
         )}
 
-        <div className={`flex items-start ${compact ? 'gap-3' : 'gap-5'}`}>
+        <div className={`flex items-start flex-1 min-h-0 ${compact ? 'gap-3' : 'gap-5'}`}>
           <button onClick={compact ? undefined : onCollapse} className={`shrink-0 touch-manipulation ${compact ? 'cursor-default' : ''}`}>
             {artSrc ? (
               <PixelLogo src={artSrc} size={artSize} pixelResolution={resolution} glow className="rounded-lg" />
             ) : (
-              <div className={`rounded-lg bg-green-500/10 border border-green-500/15 flex items-center justify-center ${compact ? 'w-[72px] h-[72px]' : 'w-[140px] h-[140px]'}`}>
-                <Disc3 className={`text-green-400 animate-spin ${compact ? 'w-8 h-8' : 'w-12 h-12'}`} style={{ animationDuration: '3s' }} />
+              <div className={`rounded-lg bg-green-500/10 border border-green-500/15 flex items-center justify-center ${compact ? 'w-[120px] h-[120px]' : 'w-[140px] h-[140px]'}`}>
+                <Disc3 className={`text-green-400 animate-spin ${compact ? 'w-10 h-10' : 'w-12 h-12'}`} style={{ animationDuration: '3s' }} />
               </div>
             )}
           </button>
 
-          <div className={`flex-1 min-w-0 flex flex-col justify-between ${compact ? 'h-[72px]' : 'h-[140px]'}`}>
+          <div className={`flex-1 min-w-0 flex flex-col justify-between overflow-hidden ${compact ? 'min-h-[120px]' : 'h-[140px]'}`}>
             <div className="min-w-0">
               <ScrollingText className={`font-bold text-white tracking-wide score-glow-green block ${compact ? 'text-sm' : 'text-lg'}`}>
                 {track?.title || 'Nothing playing'}

@@ -311,6 +311,13 @@ export class SpotifyMusicService implements MusicService {
     }
   }
 
+  async skipToQueueIndex(index: number): Promise<void> {
+    if (index <= 0) return;
+    for (let i = 0; i < index; i++) {
+      await spotifyFetch('/me/player/next', { method: 'POST' });
+    }
+  }
+
   async getQueue(): Promise<SearchTrack[]> {
     const res = await spotifyFetch('/me/player/queue');
     if (res.status === 204 || !res.ok) return [];
@@ -338,25 +345,41 @@ export class SpotifyMusicService implements MusicService {
     let seed = seedTrackId?.trim();
     if (!seed) {
       const np = await spotifyFetch('/me/player/currently-playing');
-      if (np.ok) {
-        const data = await np.json();
-        seed = data.item?.id ?? '';
+      if (np.ok && np.status !== 204) {
+        try {
+          const data = await np.json();
+          seed = data.item?.id ?? '';
+        } catch {
+          // no body or invalid JSON
+        }
       }
     }
     const params = new URLSearchParams({ limit: '15' });
-    if (seed) params.set('seed_tracks', seed);
-    else params.set('seed_genres', 'pop,hip-hop,rock');
+    if (seed) {
+      params.set('seed_tracks', seed);
+    } else {
+      params.set('seed_genres', 'pop');
+    }
     const res = await spotifyFetch(`/recommendations?${params.toString()}`);
-    if (!res.ok) return [];
-    const data = await res.json();
-    const items = data.tracks ?? [];
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn('[Spotify] recommendations failed', res.status, errText.slice(0, 200));
+      return [];
+    }
+    let data: { tracks?: unknown[] };
+    try {
+      data = await res.json();
+    } catch {
+      return [];
+    }
+    const items = Array.isArray(data.tracks) ? data.tracks : [];
     return items.map((t: {
       id: string;
       uri: string;
       name: string;
-      artists: { name: string }[];
-      album: { name: string; images?: { url: string }[] };
-      duration_ms: number;
+      artists?: { name: string }[];
+      album?: { name: string; images?: { url: string }[] };
+      duration_ms?: number;
     }) => ({
       id: t.id,
       uri: t.uri,

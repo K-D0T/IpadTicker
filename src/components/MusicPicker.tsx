@@ -23,6 +23,8 @@ function TrackRow({
   track,
   onAdd,
   onPlay,
+  onSkipToIndex,
+  queueIndex,
   addingId,
   addedId,
   showAdd,
@@ -31,6 +33,8 @@ function TrackRow({
   track: SearchTrack;
   onAdd: (t: SearchTrack) => void;
   onPlay?: (t: SearchTrack) => void;
+  onSkipToIndex?: (index: number) => void;
+  queueIndex?: number;
   addingId: string | null;
   addedId: string | null;
   showAdd: boolean;
@@ -77,18 +81,18 @@ function TrackRow({
           )}
         </button>
       )}
-      {clickToPlay && onPlay && (
+      {clickToPlay && (onSkipToIndex != null || onPlay) && (
         <span className="shrink-0 p-1.5 rounded-full bg-green-500/20 text-green-400" title="Tap to play">
           <Play className="w-3.5 h-3.5" />
         </span>
       )}
     </>
   );
-  if (clickToPlay && onPlay) {
+  if (clickToPlay && (onSkipToIndex != null && queueIndex != null ? true : onPlay)) {
     return (
       <button
         type="button"
-        onClick={() => onPlay(track)}
+        onClick={() => onSkipToIndex != null && queueIndex != null ? onSkipToIndex(queueIndex) : onPlay?.(track)}
         className="w-full flex items-center gap-3 px-3 py-2 hover:bg-white/[0.06] active:bg-white/[0.08] text-left transition-colors touch-manipulation"
       >
         {row}
@@ -107,6 +111,7 @@ export default function MusicPicker({ music, compactLayout = false }: { music: M
   const [tracks, setTracks] = useState<SearchTrack[]>([]);
   const [queue, setQueue] = useState<SearchTrack[]>([]);
   const [recommended, setRecommended] = useState<SearchTrack[]>([]);
+  const [recommendedLoading, setRecommendedLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [addedId, setAddedId] = useState<string | null>(null);
@@ -140,12 +145,15 @@ export default function MusicPicker({ music, compactLayout = false }: { music: M
   }, []);
 
   const fetchRecommended = useCallback(async () => {
+    setRecommendedLoading(true);
     try {
       const res = await fetch('/api/music/recommendations');
       const data = await res.json();
-      setRecommended(data.tracks ?? []);
+      setRecommended(Array.isArray(data.tracks) ? data.tracks : []);
     } catch {
       setRecommended([]);
+    } finally {
+      setRecommendedLoading(false);
     }
   }, []);
 
@@ -193,12 +201,13 @@ export default function MusicPicker({ music, compactLayout = false }: { music: M
     }
   }, [music, fetchQueue]);
 
-  const playTrack = useCallback(async (track: SearchTrack) => {
+  const skipToQueueIndex = useCallback(async (index: number) => {
+    if (index < 0) return;
     try {
-      const res = await fetch('/api/music/play', {
+      const res = await fetch('/api/music/skip-to-queue-index', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ uri: track.uri }),
+        body: JSON.stringify({ index }),
       });
       if (res.ok) {
         music.poll();
@@ -230,9 +239,9 @@ export default function MusicPicker({ music, compactLayout = false }: { music: M
         <p className="text-[11px] text-gray-600 px-3 py-2">Queue is empty — add tracks below</p>
       ) : (
         <ul className={`divide-y divide-white/5 ${compactLayout ? 'flex-1 min-h-0 overflow-y-auto scrollbar-hide' : ''}`}>
-          {queue.slice(0, 12).map((track) => (
-            <li key={track.id}>
-              <TrackRow track={track} onAdd={addToQueue} onPlay={playTrack} addingId={null} addedId={null} showAdd={false} clickToPlay />
+          {queue.slice(0, 12).map((track, index) => (
+            <li key={`${track.id}-${index}`}>
+              <TrackRow track={track} onAdd={addToQueue} onSkipToIndex={skipToQueueIndex} queueIndex={index} addingId={null} addedId={null} showAdd={false} clickToPlay />
             </li>
           ))}
         </ul>
@@ -246,8 +255,10 @@ export default function MusicPicker({ music, compactLayout = false }: { music: M
         <Sparkles className="w-3.5 h-3.5" />
         Recommended for you
       </h3>
-      {recommended.length === 0 ? (
+      {recommendedLoading ? (
         <p className="text-[11px] text-gray-600 px-3 py-2">Loading…</p>
+      ) : recommended.length === 0 ? (
+        <p className="text-[11px] text-gray-600 px-3 py-2">No recommendations right now</p>
       ) : (
         <ul className="divide-y divide-white/5">
           {recommended.slice(0, 10).map((track) => (
@@ -305,8 +316,10 @@ export default function MusicPicker({ music, compactLayout = false }: { music: M
         <div className="flex-1 min-h-0 flex flex-col gap-3 overflow-hidden">
           {/* Top row: 2/7 height. Now playing 3:1, queue 1:4 width */}
           <div className="flex gap-3 min-h-0 flex-[2] overflow-hidden" style={{ minHeight: 0 }}>
-            <div className="flex-[3] min-w-0 flex flex-col overflow-hidden">
-              <ExpandedMusicPlayer music={music} onCollapse={() => {}} compact />
+            <div className="flex-[3] min-w-0 min-h-0 overflow-hidden flex flex-col">
+              <div className="h-full min-h-0 overflow-hidden rounded-xl">
+                <ExpandedMusicPlayer music={music} onCollapse={() => {}} compact />
+              </div>
             </div>
             <div className="flex-[1] min-w-0 flex flex-col rounded-lg bg-white/[0.02] border border-white/5 overflow-hidden">
               {queueSection}
