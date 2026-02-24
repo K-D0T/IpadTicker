@@ -366,21 +366,22 @@ export class SpotifyMusicService implements MusicService {
       console.warn('[Spotify] recommendations failed', res.status, errText.slice(0, 200));
       return [];
     }
-    let data: { tracks?: unknown[] };
-    try {
-      data = await res.json();
-    } catch {
-      return [];
-    }
-    const items = Array.isArray(data.tracks) ? data.tracks : [];
-    return items.map((t: {
+    type RecommendationTrack = {
       id: string;
       uri: string;
       name: string;
       artists?: { name: string }[];
       album?: { name: string; images?: { url: string }[] };
       duration_ms?: number;
-    }) => ({
+    };
+    let data: { tracks?: RecommendationTrack[] };
+    try {
+      data = await res.json();
+    } catch {
+      return [];
+    }
+    const items: RecommendationTrack[] = Array.isArray(data.tracks) ? data.tracks : [];
+    return items.map((t) => ({
       id: t.id,
       uri: t.uri,
       name: t.name || 'Unknown',
