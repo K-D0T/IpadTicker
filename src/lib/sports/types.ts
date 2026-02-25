@@ -29,6 +29,10 @@ export interface FavoriteTeam {
   displayName: string;
 }
 
+function isDisplayRank(rank: number | undefined): rank is number {
+  return typeof rank === 'number' && rank > 0 && rank <= 25;
+}
+
 export const FAVORITE_TEAMS: Record<string, FavoriteTeam> = {
   ravens: {
     league: 'nfl',
@@ -76,12 +80,12 @@ export function proxyLogoUrl(abbr: string, league: League): string {
 
 /** Team display with rank, e.g. "#18 North Carolina"; unranked teams show plain name. */
 export function teamNameWithRank(team: Team): string {
-  if (team.rank != null && team.rank > 0) return `#${team.rank} ${team.name}`;
+  if (isDisplayRank(team.rank)) return `#${team.rank} ${team.name}`;
   return team.name;
 }
 
 /** Abbreviation with rank, e.g. "#18 UNC"; unranked teams show plain abbr. */
 export function teamAbbrWithRank(team: Team): string {
-  if (team.rank != null && team.rank > 0) return `#${team.rank} ${team.abbr}`;
+  if (isDisplayRank(team.rank)) return `#${team.rank} ${team.abbr}`;
   return team.abbr;
 }

@@ -10,16 +10,52 @@ const LEAGUE_PATHS: Record<League, string> = {
 };
 
 const TEAM_IDS: Record<string, Record<League, string>> = {
+  ATL: { nfl: '1', ncaaf: '', ncaam: '' },
+  ARI: { nfl: '22', ncaaf: '', ncaam: '' },
   BAL: { nfl: '33', ncaaf: '', ncaam: '' },
+  CAR: { nfl: '29', ncaaf: '', ncaam: '' },
+  CHI: { nfl: '3', ncaaf: '', ncaam: '' },
+  CIN: { nfl: '4', ncaaf: '', ncaam: '' },
+  CLE: { nfl: '5', ncaaf: '', ncaam: '' },
   ARK: { nfl: '', ncaaf: '8', ncaam: '8' },
+  DEN: { nfl: '7', ncaaf: '', ncaam: '' },
+  DET: { nfl: '8', ncaaf: '', ncaam: '' },
+  GB: { nfl: '9', ncaaf: '', ncaam: '' },
+  TEN: { nfl: '10', ncaaf: '', ncaam: '' },
+  IND: { nfl: '11', ncaaf: '', ncaam: '' },
+  LV: { nfl: '13', ncaaf: '', ncaam: '' },
+  LAR: { nfl: '14', ncaaf: '', ncaam: '' },
+  MIA: { nfl: '15', ncaaf: '', ncaam: '' },
+  MIN: { nfl: '16', ncaaf: '', ncaam: '' },
+  NE: { nfl: '17', ncaaf: '', ncaam: '' },
+  NO: { nfl: '18', ncaaf: '', ncaam: '' },
+  NYG: { nfl: '19', ncaaf: '', ncaam: '' },
+  NYJ: { nfl: '20', ncaaf: '', ncaam: '' },
+  PHI: { nfl: '21', ncaaf: '', ncaam: '' },
+  PIT: { nfl: '23', ncaaf: '', ncaam: '' },
   KC: { nfl: '12', ncaaf: '', ncaam: '' },
   BUF: { nfl: '2', ncaaf: '', ncaam: '' },
   DAL: { nfl: '6', ncaaf: '', ncaam: '' },
   SF: { nfl: '25', ncaaf: '', ncaam: '' },
+  SEA: { nfl: '26', ncaaf: '', ncaam: '' },
+  TB: { nfl: '27', ncaaf: '', ncaam: '' },
+  WAS: { nfl: '28', ncaaf: '', ncaam: '' },
+  JAX: { nfl: '30', ncaaf: '', ncaam: '' },
+  LAC: { nfl: '24', ncaaf: '', ncaam: '' },
+  HOU: { nfl: '34', ncaaf: '', ncaam: '' },
   DUKE: { nfl: '', ncaaf: '', ncaam: '150' },
   UNC: { nfl: '', ncaaf: '', ncaam: '153' },
-  ALA: { nfl: '', ncaaf: '333', ncaam: '' },
-  LSU: { nfl: '', ncaaf: '99', ncaam: '' },
+  UK: { nfl: '', ncaaf: '96', ncaam: '96' },
+  KU: { nfl: '', ncaaf: '2305', ncaam: '2305' },
+  BAY: { nfl: '', ncaaf: '239', ncaam: '239' },
+  AUB: { nfl: '', ncaaf: '2', ncaam: '2' },
+  ALA: { nfl: '', ncaaf: '333', ncaam: '333' },
+  LSU: { nfl: '', ncaaf: '99', ncaam: '99' },
+  TENN: { nfl: '', ncaaf: '2633', ncaam: '2633' },
+  UGA: { nfl: '', ncaaf: '61', ncaam: '61' },
+  MISS: { nfl: '', ncaaf: '145', ncaam: '145' },
+  TAMU: { nfl: '', ncaaf: '245', ncaam: '245' },
+  MIZ: { nfl: '', ncaaf: '142', ncaam: '142' },
 };
 
 function mapStatus(espnStatus: string): GameStatus {
@@ -55,8 +91,15 @@ function parseCompetition(event: any, league: League): Game {
   const away = competition?.competitors?.find((c: any) => c.homeAway === 'away');
   const statusDetail = competition?.status;
 
-  const homeRank = home?.curatedRank?.current != null ? Number(home.curatedRank.current) : undefined;
-  const awayRank = away?.curatedRank?.current != null ? Number(away.curatedRank.current) : undefined;
+  const toRank = (value: unknown): number | undefined => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return undefined;
+    if (n < 1 || n > 25) return undefined;
+    return n;
+  };
+
+  const homeRank = toRank(home?.curatedRank?.current);
+  const awayRank = toRank(away?.curatedRank?.current);
 
   return {
     id: String(event.id || Math.random()),

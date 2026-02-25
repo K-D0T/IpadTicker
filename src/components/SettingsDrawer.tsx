@@ -87,7 +87,7 @@ export default function SettingsDrawer({ open, onClose, settings, onChange, onAp
       update({ favoriteTeamIds: current.filter((x) => x !== id) });
       return;
     }
-    if (current.length >= 4) return;
+    if (current.length >= 6) return;
     update({ favoriteTeamIds: [...current, id] });
   };
 
@@ -172,7 +172,7 @@ export default function SettingsDrawer({ open, onClose, settings, onChange, onAp
                   <User className="w-4 h-4 text-cyan-400" />
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Personal Cards</h3>
                 </div>
-                <p className="text-[11px] text-gray-500 mb-2">Pick up to 4 favorites</p>
+                <p className="text-[11px] text-gray-500 mb-2">Pick up to 6 favorites</p>
                 <div className="flex flex-wrap gap-2">
                   {FAVORITE_TEAM_OPTIONS.map((team) => {
                     const selected = settings.favoriteTeamIds.includes(team.id);
