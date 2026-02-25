@@ -31,6 +31,11 @@ function logoSrc(team: { abbr: string; logo?: string }, league: League): string 
   return proxyLogoUrl(team.abbr, league);
 }
 
+function youtubeTvSearchUrl(game: Game): string {
+  const query = `${game.awayTeam.name} ${game.homeTeam.name} ${leagueDisplayName(game.league)} live`;
+  return `https://tv.youtube.com/search/${encodeURIComponent(query)}`;
+}
+
 function useCountdown(targetDate: string | undefined) {
   const [timeLeft, setTimeLeft] = useState('');
   useEffect(() => {
@@ -135,6 +140,17 @@ function LiveHero({ game, favoriteTeamKeys }: { game: Game; favoriteTeamKeys: Se
           <span className="text-[10px] text-gray-500 tracking-wide">{game.venue}</span>
         </div>
       )}
+
+      <div className="mt-2 relative z-10 flex justify-center">
+        <a
+          href={youtubeTvSearchUrl(game)}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="px-2.5 py-1 rounded-md text-[9px] font-bold tracking-wider uppercase bg-red-500/15 text-red-300 border border-red-400/30 hover:bg-red-500/25 transition-colors"
+        >
+          Watch on YouTube TV
+        </a>
+      </div>
     </motion.div>
   );
 }

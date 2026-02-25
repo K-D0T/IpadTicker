@@ -38,6 +38,11 @@ function logoSrc(team: { abbr: string; logo?: string }, league: League): string 
   return proxyLogoUrl(team.abbr, league) || '';
 }
 
+function youtubeTvSearchUrl(game: Game): string {
+  const query = `${game.awayTeam.name} ${game.homeTeam.name} ${leagueDisplayName(game.league)} live`;
+  return `https://tv.youtube.com/search/${encodeURIComponent(query)}`;
+}
+
 function TrendValue({ delta }: { delta: number }) {
   if (delta === 0) {
     return (
@@ -78,7 +83,7 @@ function GameCard({ game, index, odds, trend, scoreEvent }: {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6 }}
       transition={{ delay: index * 0.03 }}
-      className={`relative rounded-lg px-3 py-2 transition-colors overflow-hidden ${
+      className={`relative rounded-lg px-3 py-2.5 transition-colors overflow-hidden ${
         isNailBiter
           ? 'bg-orange-500/5 border border-orange-500/10 led-pulse'
           : isLive
@@ -86,11 +91,6 @@ function GameCard({ game, index, odds, trend, scoreEvent }: {
             : 'border border-white/[0.04] hover:bg-white/[0.02]'
       } ${leadChangeActive ? 'lead-change-flash' : ''} ${scoreChangeActive ? 'score-update-glow' : ''}`}
     >
-      {leadChangeActive && (
-        <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider bg-orange-500/20 text-orange-300 border border-orange-400/40">
-          LEAD CHANGE
-        </span>
-      )}
       <div className="flex items-center justify-between gap-2 min-w-0">
         <div className="flex flex-col items-center gap-0.5 w-[4.5rem] shrink-0 min-w-0">
           <PixelLogo src={logoSrc(game.awayTeam, game.league)} size={38} pixelResolution={14} />
@@ -130,6 +130,11 @@ function GameCard({ game, index, odds, trend, scoreEvent }: {
               {isLive && !isNailBiter && game.clock && (
                 <span className="text-[9px] text-gray-500 tabular-nums">
                   {game.period ? (game.league === 'ncaam' ? `H${game.period}` : `Q${game.period}`) : ''} {game.clock}
+                </span>
+              )}
+              {leadChangeActive && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider bg-orange-500/20 text-orange-300 border border-orange-400/40">
+                  LEAD CHANGE
                 </span>
               )}
               {isFinal && (
@@ -172,6 +177,18 @@ function GameCard({ game, index, odds, trend, scoreEvent }: {
             <span className="text-[8px] text-cyan-300">{impliedProbability(odds.homeML).toFixed(1)}%</span>
           </div>
           <span className="text-gray-600 text-[9px]">H</span>
+        </div>
+      )}
+      {isLive && (
+        <div className="mt-1.5 flex justify-center">
+          <a
+            href={youtubeTvSearchUrl(game)}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="px-2.5 py-1 rounded-md text-[9px] font-bold tracking-wider uppercase bg-red-500/15 text-red-300 border border-red-400/30 hover:bg-red-500/25 transition-colors"
+          >
+            Watch on YouTube TV
+          </a>
         </div>
       )}
     </motion.div>
@@ -293,7 +310,7 @@ export default function ClosestGamesTile({ leagues, refreshInterval }: ClosestGa
             {Array.from({ length: 4 }).map((_, i) => <ScoreRowSkeleton key={i} />)}
           </div>
         ) : todayCount > 0 ? (
-          <div className="space-y-0.5">
+          <div className="space-y-2">
             <AnimatePresence mode="popLayout">
               {todayGames.data!.map((game, i) => (
                 <GameCard
