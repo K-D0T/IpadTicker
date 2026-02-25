@@ -21,6 +21,7 @@ export interface Game {
   clock: string | null;
   period: number | null;
   venue: string | null;
+  broadcastNetwork?: string | null;
 }
 
 export interface FavoriteTeam {

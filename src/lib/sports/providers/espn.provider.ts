@@ -100,6 +100,10 @@ function parseCompetition(event: any, league: League): Game {
 
   const homeRank = toRank(home?.curatedRank?.current);
   const awayRank = toRank(away?.curatedRank?.current);
+  const broadcastNetwork =
+    competition?.broadcasts?.[0]?.names?.[0]
+    || event?.broadcasts?.[0]?.names?.[0]
+    || null;
 
   return {
     id: String(event.id || Math.random()),
@@ -123,6 +127,7 @@ function parseCompetition(event: any, league: League): Game {
     clock: statusDetail?.displayClock ?? null,
     period: statusDetail?.period ?? null,
     venue: competition?.venue?.fullName ?? null,
+    broadcastNetwork,
   };
 }
 

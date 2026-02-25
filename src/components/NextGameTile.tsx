@@ -32,7 +32,10 @@ function logoSrc(team: { abbr: string; logo?: string }, league: League): string 
 }
 
 function youtubeTvSearchUrl(game: Game): string {
-  const query = `${game.awayTeam.name} ${game.homeTeam.name} ${leagueDisplayName(game.league)} live`;
+  const network = game.broadcastNetwork?.trim();
+  const query = network
+    ? `${network} live`
+    : `${game.awayTeam.name} ${game.homeTeam.name} ${leagueDisplayName(game.league)} live`;
   return `https://tv.youtube.com/search/${encodeURIComponent(query)}`;
 }
 
@@ -148,7 +151,7 @@ function LiveHero({ game, favoriteTeamKeys }: { game: Game; favoriteTeamKeys: Se
           rel="noreferrer noopener"
           className="px-2.5 py-1 rounded-md text-[9px] font-bold tracking-wider uppercase bg-red-500/15 text-red-300 border border-red-400/30 hover:bg-red-500/25 transition-colors"
         >
-          Watch on YouTube TV
+          Watch on YouTube TV {game.broadcastNetwork ? `(${game.broadcastNetwork})` : ''}
         </a>
       </div>
     </motion.div>
