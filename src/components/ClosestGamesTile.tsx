@@ -41,8 +41,8 @@ function logoSrc(team: { abbr: string; logo?: string }, league: League): string 
 function youtubeTvSearchUrl(game: Game): string {
   const network = game.broadcastNetwork?.trim();
   const query = network
-    ? `${network} live`
-    : `${game.awayTeam.name} ${game.homeTeam.name} ${leagueDisplayName(game.league)} live`;
+    ? `${network}`
+    : `${game.awayTeam.name} ${game.homeTeam.name} ${leagueDisplayName(game.league)}`;
   return `https://tv.youtube.com/search/${encodeURIComponent(query)}`;
 }
 

@@ -13,10 +13,16 @@ import PixelLogo from './PixelLogo';
 interface NextGameTileProps {
   refreshInterval: number;
   razorbacksLeague: 'ncaaf' | 'ncaam';
+  selectedLeagues: League[];
   favoriteTeamIds: string[];
+  compactLayout?: boolean;
 }
 
 interface NextGameResponse { game: Game | null; }
+interface CloseWithOddsResponse {
+  games: Game[];
+  oddsByGameId: Record<string, { awayML: number; homeML: number }>;
+}
 
 interface FavoriteNextEntry {
   id: string;
@@ -34,8 +40,8 @@ function logoSrc(team: { abbr: string; logo?: string }, league: League): string 
 function youtubeTvSearchUrl(game: Game): string {
   const network = game.broadcastNetwork?.trim();
   const query = network
-    ? `${network} live`
-    : `${game.awayTeam.name} ${game.homeTeam.name} ${leagueDisplayName(game.league)} live`;
+    ? `${network}`
+    : `${game.awayTeam.name} ${game.homeTeam.name} ${leagueDisplayName(game.league)}`;
   return `https://tv.youtube.com/search/${encodeURIComponent(query)}`;
 }
 
@@ -61,7 +67,7 @@ function useCountdown(targetDate: string | undefined) {
   return timeLeft;
 }
 
-function LiveHero({ game, favoriteTeamKeys }: { game: Game; favoriteTeamKeys: Set<string> }) {
+function LiveHero({ game, favoriteTeamKeys, compact = false }: { game: Game; favoriteTeamKeys: Set<string>; compact?: boolean }) {
   const myIsHome = favoriteTeamKeys.has(game.homeTeam.abbr);
   const myTeam = myIsHome ? game.homeTeam : game.awayTeam;
   const oppTeam = myIsHome ? game.awayTeam : game.homeTeam;
@@ -76,7 +82,7 @@ function LiveHero({ game, favoriteTeamKeys }: { game: Game; favoriteTeamKeys: Se
     <motion.div
       initial={{ opacity: 0, scale: 0.97 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex-1 rounded-xl live-hero-bg border border-red-500/15 p-4 flex flex-col relative overflow-hidden"
+      className={`flex-1 rounded-xl live-hero-bg border border-red-500/15 ${compact ? 'p-3 min-h-[140px]' : 'p-4'} flex flex-col relative overflow-hidden`}
     >
       <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 via-transparent to-orange-500/5 led-pulse pointer-events-none" />
 
@@ -102,25 +108,25 @@ function LiveHero({ game, favoriteTeamKeys }: { game: Game; favoriteTeamKeys: Se
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center gap-5 relative z-10">
+      <div className={`flex-1 flex items-center justify-center relative z-10 ${compact ? 'gap-3' : 'gap-5'}`}>
         <div className="flex flex-col items-center gap-1.5 flex-1">
-          <PixelLogo src={myLogo} size={90} pixelResolution={22} glow />
-          <p className="text-xs font-bold text-gray-200 tracking-wider text-center">{myTeam.name}</p>
+          <PixelLogo src={myLogo} size={compact ? 64 : 90} pixelResolution={compact ? 18 : 22} glow />
+          <p className={`${compact ? 'text-[11px]' : 'text-xs'} font-bold text-gray-200 tracking-wider text-center line-clamp-1`}>{myTeam.name}</p>
           <span className={`text-[8px] uppercase tracking-widest px-2 py-0.5 rounded-full ${
             myIsHome ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
           }`}>{myIsHome ? 'HOME' : 'AWAY'}</span>
         </div>
 
-        <div className="flex flex-col items-center gap-1 min-w-[120px]">
-          <div className="flex items-end gap-3">
-            <span className={`text-5xl font-black tabular-nums tracking-wider ${winning || tied ? 'text-white score-glow' : 'text-gray-500'}`}>{myScore}</span>
+        <div className={`flex flex-col items-center gap-1 ${compact ? 'min-w-[96px]' : 'min-w-[120px]'}`}>
+          <div className={`flex items-end ${compact ? 'gap-2' : 'gap-3'}`}>
+            <span className={`${compact ? 'text-4xl' : 'text-5xl'} font-black tabular-nums tracking-wider ${winning || tied ? 'text-white score-glow' : 'text-gray-500'}`}>{myScore}</span>
             <span className="text-lg text-gray-600 font-bold pb-2">-</span>
-            <span className={`text-5xl font-black tabular-nums tracking-wider ${!winning || tied ? 'text-white score-glow' : 'text-gray-500'}`}>{oppScore}</span>
+            <span className={`${compact ? 'text-4xl' : 'text-5xl'} font-black tabular-nums tracking-wider ${!winning || tied ? 'text-white score-glow' : 'text-gray-500'}`}>{oppScore}</span>
           </div>
           {!tied && (
             <div className="flex items-center gap-1">
               <Zap className={`w-3 h-3 ${winning ? 'text-emerald-400' : 'text-red-400'}`} />
-              <span className={`text-[9px] font-bold tracking-widest ${winning ? 'text-emerald-400' : 'text-red-400'}`}>
+              <span className={`${compact ? 'text-[8px]' : 'text-[9px]'} font-bold tracking-widest ${winning ? 'text-emerald-400' : 'text-red-400'}`}>
                 {winning ? 'LEADING' : 'TRAILING'} BY {Math.abs(myScore - oppScore)}
               </span>
             </div>
@@ -129,8 +135,8 @@ function LiveHero({ game, favoriteTeamKeys }: { game: Game; favoriteTeamKeys: Se
         </div>
 
         <div className="flex flex-col items-center gap-1.5 flex-1">
-          <PixelLogo src={oppLogo} size={90} pixelResolution={22} />
-          <p className="text-xs font-bold text-gray-200 tracking-wider text-center">{oppTeam.name}</p>
+          <PixelLogo src={oppLogo} size={compact ? 64 : 90} pixelResolution={compact ? 18 : 22} />
+          <p className={`${compact ? 'text-[11px]' : 'text-xs'} font-bold text-gray-200 tracking-wider text-center line-clamp-1`}>{oppTeam.name}</p>
           <span className={`text-[8px] uppercase tracking-widest px-2 py-0.5 rounded-full ${
             !myIsHome ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
           }`}>{!myIsHome ? 'HOME' : 'AWAY'}</span>
@@ -144,12 +150,12 @@ function LiveHero({ game, favoriteTeamKeys }: { game: Game; favoriteTeamKeys: Se
         </div>
       )}
 
-      <div className="mt-2 relative z-10 flex justify-center">
+      <div className={`relative z-10 flex justify-center ${compact ? 'mt-1' : 'mt-2'}`}>
         <a
           href={youtubeTvSearchUrl(game)}
           target="_blank"
           rel="noreferrer noopener"
-          className="px-2.5 py-1 rounded-md text-[9px] font-bold tracking-wider uppercase bg-red-500/15 text-red-300 border border-red-400/30 hover:bg-red-500/25 transition-colors"
+          className={`rounded-md font-bold tracking-wider uppercase bg-red-500/15 text-red-300 border border-red-400/30 hover:bg-red-500/25 transition-colors ${compact ? 'px-2 py-0.5 text-[8px]' : 'px-2.5 py-1 text-[9px]'}`}
         >
           Watch on YouTube TV {game.broadcastNetwork ? `(${game.broadcastNetwork})` : ''}
         </a>
@@ -238,7 +244,7 @@ function UpcomingCard({ game, label, teamAbbr, teamLeague, solo }: {
   );
 }
 
-export default function NextGameTile({ refreshInterval, razorbacksLeague, favoriteTeamIds }: NextGameTileProps) {
+export default function NextGameTile({ refreshInterval, razorbacksLeague, selectedLeagues, favoriteTeamIds, compactLayout = false }: NextGameTileProps) {
   const favorites = useMemo(
     () => resolveFavoriteTeams(favoriteTeamIds, razorbacksLeague),
     [favoriteTeamIds, razorbacksLeague],
@@ -266,9 +272,27 @@ export default function NextGameTile({ refreshInterval, razorbacksLeague, favori
     interval: refreshInterval,
   });
 
+  const sharedLiveScores = usePolling<Record<string, Game>>({
+    fetcher: async () => {
+      const leagues = [...new Set<League>(selectedLeagues)];
+      const out: Record<string, Game> = {};
+      if (leagues.length === 0) return out;
+      const res = await fetch(`/api/sports/close-with-odds?leagues=${leagues.join(',')}&limit=8`);
+      const data: CloseWithOddsResponse = await res.json();
+      const games = data.games ?? [];
+      for (const g of games) {
+        if (g.status !== 'live') continue;
+        out[g.homeTeam.abbr] = g;
+        out[g.awayTeam.abbr] = g;
+      }
+      return out;
+    },
+    interval: refreshInterval,
+  });
+
   const loading = nextGames.loading;
-  const liveEntry = (nextGames.data || []).find((entry) => entry.game?.status === 'live');
-  const myLiveGame = liveEntry?.game ?? null;
+  const liveFavorite = favorites.find((f) => !!sharedLiveScores.data?.[f.teamKey]) ?? null;
+  const myLiveGame = liveFavorite ? (sharedLiveScores.data?.[liveFavorite.teamKey] ?? null) : null;
 
   const upcomingEntries = [...(nextGames.data || [])].sort((a, b) => {
     if (!a.game) return 1;
@@ -288,8 +312,8 @@ export default function NextGameTile({ refreshInterval, razorbacksLeague, favori
     }
   }
 
-  const filteredUpcoming = liveEntry
-    ? upcomingEntries.filter((e) => e.id !== liveEntry.id)
+  const filteredUpcoming = liveFavorite
+    ? upcomingEntries.filter((e) => e.id !== liveFavorite.id)
     : upcomingEntries;
   const hasHero = !!myLiveGame;
 
@@ -305,10 +329,17 @@ export default function NextGameTile({ refreshInterval, razorbacksLeague, favori
       ) : (
         <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto scrollbar-hide">
           <AnimatePresence mode="wait">
-            {myLiveGame && <LiveHero key={`live-${myLiveGame.id}`} game={myLiveGame} favoriteTeamKeys={favoriteKeys} />}
+            {myLiveGame && (
+              <LiveHero
+                key={`live-${myLiveGame.id}`}
+                game={myLiveGame}
+                favoriteTeamKeys={favoriteKeys}
+                compact={compactLayout}
+              />
+            )}
           </AnimatePresence>
 
-          {filteredUpcoming.map((entry) => (
+          {(compactLayout && hasHero ? filteredUpcoming.slice(0, 1) : filteredUpcoming).map((entry) => (
             <UpcomingCard
               key={entry.id}
               game={entry.game}

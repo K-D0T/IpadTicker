@@ -220,7 +220,9 @@ export default function Dashboard() {
                   <NextGameTile
                     refreshInterval={settings.refreshInterval}
                     razorbacksLeague={settings.razorbacksSport}
+                    selectedLeagues={settings.selectedLeagues}
                     favoriteTeamIds={settings.favoriteTeamIds}
+                    compactLayout={musicExpanded && canExpand}
                   />
                 </div>
               </div>
