@@ -62,16 +62,6 @@ export default function Dashboard() {
     }
   };
 
-  if (!loaded) {
-    return (
-      <div className="h-screen w-screen bg-[var(--color-background)] flex items-center justify-center">
-        <div className="animate-pulse text-gray-600 text-sm tracking-wider">Loading dashboard...</div>
-      </div>
-    );
-  }
-
-  const canExpand = music.connected && music.track?.isPlaying;
-
   const applyScene = useCallback((scene: 'custom' | 'game-night' | 'halftime' | 'music-mode') => {
     const sceneToPage = scene === 'music-mode' ? 1 : 0;
     const sceneRefresh = scene === 'game-night' ? 15000 : scene === 'music-mode' ? 60000 : 30000;
@@ -90,6 +80,16 @@ export default function Dashboard() {
       void music.controlAction('volume', sceneVolume);
     }
   }, [setSettings, music]);
+
+  if (!loaded) {
+    return (
+      <div className="h-screen w-screen bg-[var(--color-background)] flex items-center justify-center">
+        <div className="animate-pulse text-gray-600 text-sm tracking-wider">Loading dashboard...</div>
+      </div>
+    );
+  }
+
+  const canExpand = music.connected && music.track?.isPlaying;
 
   return (
     <div className={`h-screen w-screen bg-[var(--color-background)] flex flex-col overflow-hidden ${settings.kioskMode ? 'kiosk-mode' : ''}`}>
