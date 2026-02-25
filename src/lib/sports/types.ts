@@ -74,17 +74,14 @@ export function proxyLogoUrl(abbr: string, league: League): string {
   return `/api/img?url=${encodeURIComponent(raw)}`;
 }
 
-/** Display rank: use API rank when present, otherwise 99 for unranked. */
-const DISPLAY_RANK_UNRANKED = 99;
-
-/** Team display with rank, e.g. "#18 North Carolina" or "#99 North Carolina" (unranked). */
+/** Team display with rank, e.g. "#18 North Carolina"; unranked teams show plain name. */
 export function teamNameWithRank(team: Team): string {
-  const rank = team.rank != null ? team.rank : DISPLAY_RANK_UNRANKED;
-  return `#${rank} ${team.name}`;
+  if (team.rank != null && team.rank > 0) return `#${team.rank} ${team.name}`;
+  return team.name;
 }
 
-/** Abbreviation with rank, e.g. "#18 UNC" or "#99 UNC" (unranked). */
+/** Abbreviation with rank, e.g. "#18 UNC"; unranked teams show plain abbr. */
 export function teamAbbrWithRank(team: Team): string {
-  const rank = team.rank != null ? team.rank : DISPLAY_RANK_UNRANKED;
-  return `#${rank} ${team.abbr}`;
+  if (team.rank != null && team.rank > 0) return `#${team.rank} ${team.abbr}`;
+  return team.abbr;
 }

@@ -246,12 +246,33 @@ export function getSpotifyCookieHeaders(tokens: SpotifyTokens, secure = false): 
 }
 
 export class SpotifyMusicService implements MusicService {
-  private async getActiveDeviceId(): Promise<string | null> {
+  private async getBestVolumeDeviceId(): Promise<string | null> {
     const res = await spotifyFetch('/me/player');
-    if (!res.ok) return null;
+    if (res.ok) {
+      try {
+        const data = await res.json();
+        const device = data?.device;
+        if (device?.id && device?.supports_volume !== false && !device?.is_restricted) {
+          return device.id;
+        }
+      } catch {
+        // continue to devices fallback
+      }
+    }
+
+    const devicesRes = await spotifyFetch('/me/player/devices');
+    if (!devicesRes.ok) return null;
     try {
-      const data = await res.json();
-      return data?.device?.id ?? null;
+      const data = await devicesRes.json();
+      const devices: Array<{
+        id: string;
+        is_active?: boolean;
+        is_restricted?: boolean;
+        supports_volume?: boolean;
+      }> = Array.isArray(data?.devices) ? data.devices : [];
+      const candidate = devices.find((d) => d.is_active && !d.is_restricted && d.supports_volume !== false)
+        || devices.find((d) => !d.is_restricted && d.supports_volume !== false);
+      return candidate?.id ?? null;
     } catch {
       return null;
     }
@@ -296,10 +317,11 @@ export class SpotifyMusicService implements MusicService {
       case 'volume':
         if (req.value != null) {
           const volume = Math.max(0, Math.min(100, Math.round(req.value)));
-          const deviceId = await this.getActiveDeviceId();
-          const path = deviceId
-            ? `/me/player/volume?volume_percent=${volume}&device_id=${encodeURIComponent(deviceId)}`
-            : `/me/player/volume?volume_percent=${volume}`;
+          const deviceId = await this.getBestVolumeDeviceId();
+          if (!deviceId) {
+            throw new Error('No controllable Spotify device found. Start playback in Spotify first.');
+          }
+          const path = `/me/player/volume?volume_percent=${volume}&device_id=${encodeURIComponent(deviceId)}`;
           await assertSpotifyOk(await spotifyFetch(path, { method: 'PUT' }), 'set volume');
         }
         break;

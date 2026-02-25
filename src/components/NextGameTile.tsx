@@ -13,12 +13,10 @@ import PixelLogo from './PixelLogo';
 interface NextGameTileProps {
   refreshInterval: number;
   razorbacksLeague: 'ncaaf' | 'ncaam';
-  selectedLeagues: League[];
   favoriteTeamIds: string[];
 }
 
 interface NextGameResponse { game: Game | null; }
-interface CloseGamesResponse { games: Game[]; }
 
 interface FavoriteNextEntry {
   id: string;
@@ -221,7 +219,7 @@ function UpcomingCard({ game, label, teamAbbr, teamLeague, solo }: {
   );
 }
 
-export default function NextGameTile({ refreshInterval, razorbacksLeague, selectedLeagues, favoriteTeamIds }: NextGameTileProps) {
+export default function NextGameTile({ refreshInterval, razorbacksLeague, favoriteTeamIds }: NextGameTileProps) {
   const favorites = useMemo(
     () => resolveFavoriteTeams(favoriteTeamIds, razorbacksLeague),
     [favoriteTeamIds, razorbacksLeague],
@@ -249,26 +247,9 @@ export default function NextGameTile({ refreshInterval, razorbacksLeague, select
     interval: refreshInterval,
   });
 
-  const liveGames = usePolling<Game[]>({
-    fetcher: async () => {
-      const leagues = [...new Set<League>([...selectedLeagues, ...favorites.map((f) => f.league)])];
-      const all = await Promise.all(
-        leagues.map((lg) =>
-          fetch(`/api/sports/close?league=${lg}&limit=10`)
-            .then((r) => r.json())
-            .then((d: CloseGamesResponse) => d.games || [])
-            .catch(() => [] as Game[]),
-        ),
-      );
-      return all.flat();
-    },
-    interval: refreshInterval,
-  });
-
   const loading = nextGames.loading;
-  const myLiveGame = (liveGames.data || []).find(
-    (g) => (g.status === 'live') && (favoriteKeys.has(g.homeTeam.abbr) || favoriteKeys.has(g.awayTeam.abbr)),
-  );
+  const liveEntry = (nextGames.data || []).find((entry) => entry.game?.status === 'live');
+  const myLiveGame = liveEntry?.game ?? null;
 
   const upcomingEntries = [...(nextGames.data || [])].sort((a, b) => {
     if (!a.game) return 1;
@@ -288,11 +269,8 @@ export default function NextGameTile({ refreshInterval, razorbacksLeague, select
     }
   }
 
-  const liveTeamAbbr = myLiveGame
-    ? (favoriteKeys.has(myLiveGame.homeTeam.abbr) ? myLiveGame.homeTeam.abbr : myLiveGame.awayTeam.abbr)
-    : null;
-  const filteredUpcoming = liveTeamAbbr
-    ? upcomingEntries.filter((e) => e.abbr !== liveTeamAbbr)
+  const filteredUpcoming = liveEntry
+    ? upcomingEntries.filter((e) => e.id !== liveEntry.id)
     : upcomingEntries;
   const hasHero = !!myLiveGame;
 

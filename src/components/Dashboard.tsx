@@ -63,22 +63,52 @@ export default function Dashboard() {
   };
 
   const applyScene = useCallback((scene: 'custom' | 'game-night' | 'halftime' | 'music-mode') => {
-    const sceneToPage = scene === 'music-mode' ? 1 : 0;
-    const sceneRefresh = scene === 'game-night' ? 15000 : scene === 'music-mode' ? 60000 : 30000;
-    const sceneVolume = scene === 'game-night' ? 70 : scene === 'halftime' ? 45 : scene === 'music-mode' ? 80 : music.volume;
+    if (scene === 'custom') {
+      setSettings((prev) => ({ ...prev, scenePreset: 'custom' }));
+      return;
+    }
+
+    if (scene === 'game-night') {
+      setSettings((prev) => ({
+        ...prev,
+        scenePreset: scene,
+        refreshInterval: 15000,
+        alertCloseMargin: 2,
+        quietHoursEnabled: false,
+        lightMode: false,
+        selectedLeagues: ['nfl', 'ncaaf', 'ncaam'],
+      }));
+      scrollToPage(0);
+      music.setVolume(70);
+      void music.controlAction('volume', 70);
+      return;
+    }
+
+    if (scene === 'halftime') {
+      setSettings((prev) => ({
+        ...prev,
+        scenePreset: scene,
+        refreshInterval: 30000,
+        alertCloseMargin: 5,
+        lightMode: false,
+      }));
+      scrollToPage(0);
+      music.setVolume(45);
+      void music.controlAction('volume', 45);
+      return;
+    }
 
     setSettings((prev) => ({
       ...prev,
-      scenePreset: scene,
-      refreshInterval: scene === 'custom' ? prev.refreshInterval : sceneRefresh,
+      scenePreset: 'music-mode',
+      refreshInterval: 60000,
+      alertCloseMargin: 7,
+      lightMode: false,
     }));
-
-    scrollToPage(sceneToPage);
-
-    if (scene !== 'custom') {
-      music.setVolume(sceneVolume);
-      void music.controlAction('volume', sceneVolume);
-    }
+    scrollToPage(1);
+    setMusicExpanded(true);
+    music.setVolume(80);
+    void music.controlAction('volume', 80);
   }, [setSettings, music]);
 
   if (!loaded) {
@@ -103,6 +133,11 @@ export default function Dashboard() {
           )}
           {settings.kioskMode && (
             <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 tracking-wider shrink-0">KIOSK</span>
+          )}
+          {settings.scenePreset !== 'custom' && (
+            <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-cyan-500/10 text-cyan-300 border border-cyan-500/20 tracking-wider shrink-0">
+              {settings.scenePreset === 'game-night' ? 'GAME NIGHT' : settings.scenePreset === 'halftime' ? 'HALFTIME' : 'MUSIC MODE'}
+            </span>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -185,7 +220,6 @@ export default function Dashboard() {
                   <NextGameTile
                     refreshInterval={settings.refreshInterval}
                     razorbacksLeague={settings.razorbacksSport}
-                    selectedLeagues={settings.selectedLeagues}
                     favoriteTeamIds={settings.favoriteTeamIds}
                   />
                 </div>

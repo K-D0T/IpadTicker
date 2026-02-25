@@ -91,6 +91,11 @@ export default function SettingsDrawer({ open, onClose, settings, onChange, onAp
     update({ favoriteTeamIds: [...current, id] });
   };
 
+  const applySceneAndClose = (scene: AppSettings['scenePreset']) => {
+    onApplyScene(scene);
+    onClose();
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -130,33 +135,36 @@ export default function SettingsDrawer({ open, onClose, settings, onChange, onAp
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => onApplyScene('game-night')}
+                    onClick={() => applySceneAndClose('game-night')}
                     className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${settings.scenePreset === 'game-night' ? 'bg-amber-500 text-black' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
                   >
                     Game Night
                   </button>
                   <button
                     type="button"
-                    onClick={() => onApplyScene('halftime')}
+                    onClick={() => applySceneAndClose('halftime')}
                     className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${settings.scenePreset === 'halftime' ? 'bg-orange-500 text-black' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
                   >
                     Halftime
                   </button>
                   <button
                     type="button"
-                    onClick={() => onApplyScene('music-mode')}
+                    onClick={() => applySceneAndClose('music-mode')}
                     className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${settings.scenePreset === 'music-mode' ? 'bg-green-500 text-black' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
                   >
                     Music Mode
                   </button>
                   <button
                     type="button"
-                    onClick={() => onApplyScene('custom')}
+                    onClick={() => applySceneAndClose('custom')}
                     className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${settings.scenePreset === 'custom' ? 'bg-cyan-500 text-black' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
                   >
                     Custom
                   </button>
                 </div>
+                <p className="text-[10px] text-gray-500 mt-2">
+                  Scenes instantly change refresh, alerts, page focus, and target music volume.
+                </p>
               </section>
 
               <section className="mb-6">

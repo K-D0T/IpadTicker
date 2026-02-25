@@ -21,6 +21,7 @@ interface CloseWithOddsResponse {
 interface UpcomingDay { date: string; label: string; games: Game[]; }
 interface UpcomingResponse { upcoming: UpcomingDay[]; }
 interface OddsDelta { awayDelta: number; homeDelta: number; changedAt: number; }
+interface ScoreEvent { leadChanged: boolean; scoreChanged: boolean; changedAt: number; }
 
 function formatAmerican(price: number): string {
   if (price > 0) return `+${price}`;
@@ -54,11 +55,12 @@ function TrendValue({ delta }: { delta: number }) {
   );
 }
 
-function GameCard({ game, index, odds, trend }: {
+function GameCard({ game, index, odds, trend, scoreEvent }: {
   game: Game;
   index: number;
   odds?: { awayML: number; homeML: number };
   trend?: OddsDelta;
+  scoreEvent?: ScoreEvent;
 }) {
   const isLive = game.status === 'live';
   const isFinal = game.status === 'final';
@@ -67,6 +69,8 @@ function GameCard({ game, index, odds, trend }: {
   const isNailBiter = isLive && diff <= 3;
   const awayWon = isFinal && (game.awayTeam.score ?? 0) > (game.homeTeam.score ?? 0);
   const homeWon = isFinal && (game.homeTeam.score ?? 0) > (game.awayTeam.score ?? 0);
+  const leadChangeActive = isLive && !!scoreEvent?.leadChanged;
+  const scoreChangeActive = isLive && !!scoreEvent?.scoreChanged;
 
   return (
     <motion.div
@@ -74,14 +78,19 @@ function GameCard({ game, index, odds, trend }: {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6 }}
       transition={{ delay: index * 0.03 }}
-      className={`rounded-lg px-3 py-2 transition-colors overflow-hidden ${
+      className={`relative rounded-lg px-3 py-2 transition-colors overflow-hidden ${
         isNailBiter
           ? 'bg-orange-500/5 border border-orange-500/10 led-pulse'
           : isLive
             ? 'bg-red-500/5 border border-red-500/8'
             : 'border border-white/[0.04] hover:bg-white/[0.02]'
-      }`}
+      } ${leadChangeActive ? 'lead-change-flash' : ''} ${scoreChangeActive ? 'score-update-glow' : ''}`}
     >
+      {leadChangeActive && (
+        <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider bg-orange-500/20 text-orange-300 border border-orange-400/40">
+          LEAD CHANGE
+        </span>
+      )}
       <div className="flex items-center justify-between gap-2 min-w-0">
         <div className="flex flex-col items-center gap-0.5 w-[4.5rem] shrink-0 min-w-0">
           <PixelLogo src={logoSrc(game.awayTeam, game.league)} size={38} pixelResolution={14} />
@@ -185,7 +194,9 @@ function UpcomingGameRow({ game }: { game: Game }) {
 
 export default function ClosestGamesTile({ leagues, refreshInterval }: ClosestGamesTileProps) {
   const prevOddsRef = useRef<Record<string, { awayML: number; homeML: number }>>({});
+  const prevScoreRef = useRef<Record<string, { away: number; home: number; leader: 'away' | 'home' | 'tie' }>>({});
   const [oddsTrendByGameId, setOddsTrendByGameId] = useState<Record<string, OddsDelta>>({});
+  const [scoreEventByGameId, setScoreEventByGameId] = useState<Record<string, ScoreEvent>>({});
 
   const closeWithOdds = usePolling<CloseWithOddsResponse>({
     fetcher: async () => {
@@ -223,6 +234,34 @@ export default function ClosestGamesTile({ leagues, refreshInterval }: ClosestGa
     prevOddsRef.current = oddsByGameId;
   }, [closeWithOdds.data, oddsByGameId]);
 
+  useEffect(() => {
+    const games = todayGames.data ?? [];
+    if (games.length === 0) return;
+    const now = Date.now();
+    setScoreEventByGameId((prev) => {
+      const next: Record<string, ScoreEvent> = {};
+      for (const [gameId, event] of Object.entries(prev)) {
+        if (now - event.changedAt < 25000) next[gameId] = event;
+      }
+      for (const game of games) {
+        if (game.status !== 'live') continue;
+        const away = game.awayTeam.score ?? 0;
+        const home = game.homeTeam.score ?? 0;
+        const leader: 'away' | 'home' | 'tie' = away === home ? 'tie' : (away > home ? 'away' : 'home');
+        const previous = prevScoreRef.current[game.id];
+        if (previous) {
+          const leadChanged = previous.leader !== leader && previous.leader !== 'tie' && leader !== 'tie';
+          const scoreChanged = previous.away !== away || previous.home !== home;
+          if (leadChanged || scoreChanged) {
+            next[game.id] = { leadChanged, scoreChanged, changedAt: now };
+          }
+        }
+        prevScoreRef.current[game.id] = { away, home, leader };
+      }
+      return next;
+    });
+  }, [todayGames.data]);
+
   const upcomingDays = usePolling<UpcomingDay[]>({
     fetcher: async () => {
       const res = await fetch(`/api/sports/upcoming?leagues=${leagues.join(',')}&days=3`);
@@ -257,7 +296,14 @@ export default function ClosestGamesTile({ leagues, refreshInterval }: ClosestGa
           <div className="space-y-0.5">
             <AnimatePresence mode="popLayout">
               {todayGames.data!.map((game, i) => (
-                <GameCard key={game.id} game={game} index={i} odds={oddsByGameId[game.id]} trend={oddsTrendByGameId[game.id]} />
+                <GameCard
+                  key={game.id}
+                  game={game}
+                  index={i}
+                  odds={oddsByGameId[game.id]}
+                  trend={oddsTrendByGameId[game.id]}
+                  scoreEvent={scoreEventByGameId[game.id]}
+                />
               ))}
             </AnimatePresence>
           </div>
