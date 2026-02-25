@@ -3,23 +3,30 @@
 import { usePolling } from '@/hooks/usePolling';
 import { GameCardSkeleton } from './LoadingSkeleton';
 import { Game, League, proxyLogoUrl, leagueDisplayName, teamAbbrWithRank, teamNameWithRank } from '@/lib/sports/types';
+import { resolveFavoriteTeams } from '@/lib/sports/favorites';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapPin, Zap } from 'lucide-react';
 import LedOverlay from './LedOverlay';
 import PixelLogo from './PixelLogo';
 
 interface NextGameTileProps {
   refreshInterval: number;
-  razorbacksLeague: string;
+  razorbacksLeague: 'ncaaf' | 'ncaam';
   selectedLeagues: League[];
+  favoriteTeamIds: string[];
 }
 
 interface NextGameResponse { game: Game | null; }
 interface CloseGamesResponse { games: Game[]; }
 
-const MY_ABBRS = ['BAL', 'ARK'];
-function isMyTeam(abbr: string) { return MY_ABBRS.includes(abbr); }
+interface FavoriteNextEntry {
+  id: string;
+  label: string;
+  abbr: string;
+  league: League;
+  game: Game | null;
+}
 
 function logoSrc(team: { abbr: string; logo?: string }, league: League): string {
   if (team.logo) return `/api/img?url=${encodeURIComponent(team.logo)}`;
@@ -48,10 +55,8 @@ function useCountdown(targetDate: string | undefined) {
   return timeLeft;
 }
 
-// ─── Live Hero ───────────────────────────────────────
-
-function LiveHero({ game }: { game: Game }) {
-  const myIsHome = isMyTeam(game.homeTeam.abbr);
+function LiveHero({ game, favoriteTeamKeys }: { game: Game; favoriteTeamKeys: Set<string> }) {
+  const myIsHome = favoriteTeamKeys.has(game.homeTeam.abbr);
   const myTeam = myIsHome ? game.homeTeam : game.awayTeam;
   const oppTeam = myIsHome ? game.awayTeam : game.homeTeam;
   const myLogo = logoSrc(myTeam, game.league);
@@ -76,7 +81,7 @@ function LiveHero({ game }: { game: Game }) {
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.7)]" />
           </span>
           <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-red-400">LIVE</span>
-          <span className="text-[10px] text-gray-600 ml-1">·</span>
+          <span className="text-[10px] text-gray-600 ml-1">.</span>
           <span className="text-[10px] text-gray-500 tracking-wider">{leagueDisplayName(game.league)}</span>
         </div>
         <div className="flex items-center gap-2 tabular-nums">
@@ -103,7 +108,7 @@ function LiveHero({ game }: { game: Game }) {
         <div className="flex flex-col items-center gap-1 min-w-[120px]">
           <div className="flex items-end gap-3">
             <span className={`text-5xl font-black tabular-nums tracking-wider ${winning || tied ? 'text-white score-glow' : 'text-gray-500'}`}>{myScore}</span>
-            <span className="text-lg text-gray-600 font-bold pb-2">–</span>
+            <span className="text-lg text-gray-600 font-bold pb-2">-</span>
             <span className={`text-5xl font-black tabular-nums tracking-wider ${!winning || tied ? 'text-white score-glow' : 'text-gray-500'}`}>{oppScore}</span>
           </div>
           {!tied && (
@@ -136,30 +141,24 @@ function LiveHero({ game }: { game: Game }) {
   );
 }
 
-// ─── Upcoming card — vertical centered layout ────────
-
-function UpcomingCard({ game, label, teamAbbr, solo }: {
+function UpcomingCard({ game, label, teamAbbr, teamLeague, solo }: {
   game: Game | null;
   label: string;
   teamAbbr: string;
+  teamLeague: League;
   solo: boolean;
 }) {
   const countdown = useCountdown(game?.startTime);
-  const teamLogos: Record<string, { league: League }> = {
-    BAL: { league: 'nfl' },
-    ARK: { league: 'ncaam' },
-  };
 
   if (!game) {
-    const fallbackLeague = teamLogos[teamAbbr]?.league || 'nfl';
-    const fallbackLogo = proxyLogoUrl(teamAbbr, fallbackLeague);
+    const fallbackLogo = proxyLogoUrl(teamAbbr, teamLeague);
 
     return (
       <div className={`rounded-xl bg-black/20 border border-white/5 flex items-center gap-4 px-5 py-3 ${solo ? 'flex-1' : ''}`}>
         <PixelLogo src={fallbackLogo} size={44} pixelResolution={16} className="shrink-0 opacity-30" />
         <div>
           <p className="text-sm font-bold text-gray-500">{label}</p>
-          <p className="text-[11px] text-gray-700 mt-0.5">Off-season — no games scheduled</p>
+          <p className="text-[11px] text-gray-700 mt-0.5">No upcoming games currently available</p>
         </div>
       </div>
     );
@@ -178,15 +177,13 @@ function UpcomingCard({ game, label, teamAbbr, solo }: {
       animate={{ opacity: 1, y: 0 }}
       className={`rounded-xl bg-black/20 border border-white/5 hover:border-white/10 transition-all flex flex-col items-center justify-center ${solo ? 'flex-1 py-5 px-4' : 'py-4 px-4'}`}
     >
-      {/* Team label + league */}
       <div className="flex items-center gap-2 mb-3">
         <span className={`w-1.5 h-1.5 rounded-full ${isHome ? 'bg-emerald-400' : 'bg-amber-400'}`} />
         <span className="text-[10px] uppercase tracking-widest text-gray-500 font-medium">
-          {label} · {isHome ? 'HOME' : 'AWAY'} · {leagueDisplayName(game.league)}
+          {label} . {isHome ? 'HOME' : 'AWAY'} . {leagueDisplayName(game.league)}
         </span>
       </div>
 
-      {/* Logos centered: MyTeam VS Opponent */}
       <div className="flex items-center gap-5 mb-3">
         <div className="flex flex-col items-center gap-1">
           <PixelLogo src={myLogo} size={solo ? 72 : 56} pixelResolution={solo ? 22 : 18} glow />
@@ -201,20 +198,17 @@ function UpcomingCard({ game, label, teamAbbr, solo }: {
         </div>
       </div>
 
-      {/* Opponent name with rank */}
       <p className={`font-bold text-gray-200 text-center ${solo ? 'text-base' : 'text-sm'}`}>
         vs {teamNameWithRank(opponent)}
       </p>
 
-      {/* Date/time */}
       <p className="text-[11px] text-gray-500 mt-1 text-center">
         {date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-        {' · '}
+        {' . '}
         {date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
-        {game.venue && ` · ${game.venue}`}
+        {game.venue && ` . ${game.venue}`}
       </p>
 
-      {/* Countdown */}
       {countdown && (
         <div className="mt-3 text-center">
           <p className={`font-bold tabular-nums tracking-wider score-glow-cyan bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent ${solo ? 'text-3xl' : 'text-2xl'}`}>
@@ -227,53 +221,75 @@ function UpcomingCard({ game, label, teamAbbr, solo }: {
   );
 }
 
-// ─── Main tile ───────────────────────────────────────
+export default function NextGameTile({ refreshInterval, razorbacksLeague, selectedLeagues, favoriteTeamIds }: NextGameTileProps) {
+  const favorites = useMemo(
+    () => resolveFavoriteTeams(favoriteTeamIds, razorbacksLeague),
+    [favoriteTeamIds, razorbacksLeague],
+  );
 
-export default function NextGameTile({ refreshInterval, razorbacksLeague, selectedLeagues }: NextGameTileProps) {
-  const ravens = usePolling<NextGameResponse>({
-    fetcher: () => fetch('/api/sports/next?team=ravens').then((r) => r.json()),
+  const favoriteKeys = useMemo(() => new Set(favorites.map((f) => f.teamKey)), [favorites]);
+
+  const nextGames = usePolling<FavoriteNextEntry[]>({
+    fetcher: async () => {
+      const rows = await Promise.all(
+        favorites.map(async (favorite) => {
+          const res = await fetch(`/api/sports/next?teamKey=${favorite.teamKey}&league=${favorite.league}`);
+          const data: NextGameResponse = await res.json();
+          return {
+            id: favorite.id,
+            label: favorite.label,
+            abbr: favorite.teamKey,
+            league: favorite.league,
+            game: data.game ?? null,
+          } satisfies FavoriteNextEntry;
+        }),
+      );
+      return rows;
+    },
     interval: refreshInterval,
   });
-  const razorbacks = usePolling<NextGameResponse>({
-    fetcher: () => fetch(`/api/sports/next?team=razorbacks&league=${razorbacksLeague}`).then((r) => r.json()),
-    interval: refreshInterval,
-  });
+
   const liveGames = usePolling<Game[]>({
     fetcher: async () => {
-      const leagues = [...new Set(['nfl', razorbacksLeague, ...selectedLeagues])];
+      const leagues = [...new Set<League>([...selectedLeagues, ...favorites.map((f) => f.league)])];
       const all = await Promise.all(
         leagues.map((lg) =>
           fetch(`/api/sports/close?league=${lg}&limit=10`)
             .then((r) => r.json())
             .then((d: CloseGamesResponse) => d.games || [])
-            .catch(() => [] as Game[])
-        )
+            .catch(() => [] as Game[]),
+        ),
       );
       return all.flat();
     },
     interval: refreshInterval,
   });
 
-  const loading = ravens.loading || razorbacks.loading;
+  const loading = nextGames.loading;
   const myLiveGame = (liveGames.data || []).find(
-    (g) => (g.status === 'live') && (isMyTeam(g.homeTeam.abbr) || isMyTeam(g.awayTeam.abbr))
+    (g) => (g.status === 'live') && (favoriteKeys.has(g.homeTeam.abbr) || favoriteKeys.has(g.awayTeam.abbr)),
   );
 
-  const upcomingEntries: { game: Game | null; label: string; abbr: string }[] = [];
-  if (ravens.data?.game) upcomingEntries.push({ game: ravens.data.game, label: 'Ravens', abbr: 'BAL' });
-  if (razorbacks.data?.game) upcomingEntries.push({ game: razorbacks.data.game, label: 'Razorbacks', abbr: 'ARK' });
-  upcomingEntries.sort((a, b) => {
+  const upcomingEntries = [...(nextGames.data || [])].sort((a, b) => {
     if (!a.game) return 1;
     if (!b.game) return -1;
     return new Date(a.game.startTime).getTime() - new Date(b.game.startTime).getTime();
   });
-  if (!ravens.data?.game && !upcomingEntries.find((e) => e.abbr === 'BAL'))
-    upcomingEntries.push({ game: null, label: 'Ravens', abbr: 'BAL' });
-  if (!razorbacks.data?.game && !upcomingEntries.find((e) => e.abbr === 'ARK'))
-    upcomingEntries.push({ game: null, label: 'Razorbacks', abbr: 'ARK' });
+
+  for (const favorite of favorites) {
+    if (!upcomingEntries.some((e) => e.id === favorite.id)) {
+      upcomingEntries.push({
+        id: favorite.id,
+        label: favorite.label,
+        abbr: favorite.teamKey,
+        league: favorite.league,
+        game: null,
+      });
+    }
+  }
 
   const liveTeamAbbr = myLiveGame
-    ? (isMyTeam(myLiveGame.homeTeam.abbr) ? myLiveGame.homeTeam.abbr : myLiveGame.awayTeam.abbr)
+    ? (favoriteKeys.has(myLiveGame.homeTeam.abbr) ? myLiveGame.homeTeam.abbr : myLiveGame.awayTeam.abbr)
     : null;
   const filteredUpcoming = liveTeamAbbr
     ? upcomingEntries.filter((e) => e.abbr !== liveTeamAbbr)
@@ -292,23 +308,24 @@ export default function NextGameTile({ refreshInterval, razorbacksLeague, select
       ) : (
         <div className="flex flex-col gap-2 flex-1 min-h-0 overflow-y-auto scrollbar-hide">
           <AnimatePresence mode="wait">
-            {myLiveGame && <LiveHero key={`live-${myLiveGame.id}`} game={myLiveGame} />}
+            {myLiveGame && <LiveHero key={`live-${myLiveGame.id}`} game={myLiveGame} favoriteTeamKeys={favoriteKeys} />}
           </AnimatePresence>
 
           {filteredUpcoming.map((entry) => (
             <UpcomingCard
-              key={entry.abbr}
+              key={entry.id}
               game={entry.game}
               label={entry.label}
               teamAbbr={entry.abbr}
-              solo={!hasHero && filteredUpcoming.filter(e => e.game).length <= 1}
+              teamLeague={entry.league}
+              solo={!hasHero && filteredUpcoming.filter((e) => e.game).length <= 1}
             />
           ))}
         </div>
       )}
 
-      {(ravens.error || razorbacks.error) && (
-        <p className="mt-2 text-xs text-red-400/80">{ravens.error || razorbacks.error}</p>
+      {nextGames.error && (
+        <p className="mt-2 text-xs text-red-400/80">{nextGames.error}</p>
       )}
     </LedOverlay>
   );

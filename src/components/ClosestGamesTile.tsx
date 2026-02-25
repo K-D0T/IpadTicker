@@ -1,10 +1,11 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { usePolling } from '@/hooks/usePolling';
 import { ScoreRowSkeleton } from './LoadingSkeleton';
 import { Game, League, leagueDisplayName, proxyLogoUrl, teamAbbrWithRank } from '@/lib/sports/types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Trophy, Calendar, TrendingUp } from 'lucide-react';
+import { Flame, Trophy, Calendar, TrendingUp, ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import LedOverlay from './LedOverlay';
 import PixelLogo from './PixelLogo';
 
@@ -19,10 +20,16 @@ interface CloseWithOddsResponse {
 }
 interface UpcomingDay { date: string; label: string; games: Game[]; }
 interface UpcomingResponse { upcoming: UpcomingDay[]; }
+interface OddsDelta { awayDelta: number; homeDelta: number; changedAt: number; }
 
 function formatAmerican(price: number): string {
   if (price > 0) return `+${price}`;
   return `${price}`;
+}
+
+function impliedProbability(price: number): number {
+  if (price > 0) return (100 / (price + 100)) * 100;
+  return ((-price) / ((-price) + 100)) * 100;
 }
 
 function logoSrc(team: { abbr: string; logo?: string }, league: League): string {
@@ -30,15 +37,29 @@ function logoSrc(team: { abbr: string; logo?: string }, league: League): string 
   return proxyLogoUrl(team.abbr, league) || '';
 }
 
-function isToday(dateStr: string): boolean {
-  const d = new Date(dateStr);
-  const now = new Date();
-  return d.getFullYear() === now.getFullYear()
-    && d.getMonth() === now.getMonth()
-    && d.getDate() === now.getDate();
+function TrendValue({ delta }: { delta: number }) {
+  if (delta === 0) {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-[8px] text-gray-600">
+        <Minus className="w-2.5 h-2.5" /> 0
+      </span>
+    );
+  }
+  const up = delta > 0;
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[8px] ${up ? 'text-emerald-400' : 'text-rose-400'}`}>
+      {up ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
+      {delta > 0 ? `+${delta}` : delta}
+    </span>
+  );
 }
 
-function GameCard({ game, index, odds }: { game: Game; index: number; odds?: { awayML: number; homeML: number } }) {
+function GameCard({ game, index, odds, trend }: {
+  game: Game;
+  index: number;
+  odds?: { awayML: number; homeML: number };
+  trend?: OddsDelta;
+}) {
   const isLive = game.status === 'live';
   const isFinal = game.status === 'final';
   const isPre = game.status === 'pre';
@@ -125,14 +146,22 @@ function GameCard({ game, index, odds }: { game: Game; index: number; odds?: { a
             ML
           </span>
           <span className="text-[8px] text-gray-500 font-medium">DraftKings</span>
-          <span className={`tabular-nums font-bold text-[10px] min-w-[2.5rem] text-right ${odds.awayML > 0 ? 'text-emerald-400' : 'text-gray-400'}`}>
-            {formatAmerican(odds.awayML)}
-          </span>
+          <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-white/5 bg-black/20">
+            <span className={`tabular-nums font-bold text-[10px] min-w-[2.5rem] text-right ${odds.awayML > 0 ? 'text-emerald-400' : 'text-gray-400'}`}>
+              {formatAmerican(odds.awayML)}
+            </span>
+            {trend && <TrendValue delta={trend.awayDelta} />}
+            <span className="text-[8px] text-cyan-300">{impliedProbability(odds.awayML).toFixed(1)}%</span>
+          </div>
           <span className="text-gray-600 text-[9px]">A</span>
-          <span className="text-gray-600">·</span>
-          <span className={`tabular-nums font-bold text-[10px] min-w-[2.5rem] text-right ${odds.homeML > 0 ? 'text-emerald-400' : 'text-gray-400'}`}>
-            {formatAmerican(odds.homeML)}
-          </span>
+          <span className="text-gray-600">.</span>
+          <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-white/5 bg-black/20">
+            <span className={`tabular-nums font-bold text-[10px] min-w-[2.5rem] text-right ${odds.homeML > 0 ? 'text-emerald-400' : 'text-gray-400'}`}>
+              {formatAmerican(odds.homeML)}
+            </span>
+            {trend && <TrendValue delta={trend.homeDelta} />}
+            <span className="text-[8px] text-cyan-300">{impliedProbability(odds.homeML).toFixed(1)}%</span>
+          </div>
           <span className="text-gray-600 text-[9px]">H</span>
         </div>
       )}
@@ -155,6 +184,9 @@ function UpcomingGameRow({ game }: { game: Game }) {
 }
 
 export default function ClosestGamesTile({ leagues, refreshInterval }: ClosestGamesTileProps) {
+  const prevOddsRef = useRef<Record<string, { awayML: number; homeML: number }>>({});
+  const [oddsTrendByGameId, setOddsTrendByGameId] = useState<Record<string, OddsDelta>>({});
+
   const closeWithOdds = usePolling<CloseWithOddsResponse>({
     fetcher: async () => {
       const res = await fetch(`/api/sports/close-with-odds?leagues=${leagues.join(',')}&limit=8`);
@@ -171,6 +203,25 @@ export default function ClosestGamesTile({ leagues, refreshInterval }: ClosestGa
     error: closeWithOdds.error,
   };
   const oddsByGameId = closeWithOdds.data?.oddsByGameId ?? {};
+
+  useEffect(() => {
+    if (!closeWithOdds.data) return;
+    setOddsTrendByGameId((prev) => {
+      const next = { ...prev };
+      const now = Date.now();
+      for (const [gameId, current] of Object.entries(oddsByGameId)) {
+        const previous = prevOddsRef.current[gameId];
+        if (!previous) continue;
+        const awayDelta = current.awayML - previous.awayML;
+        const homeDelta = current.homeML - previous.homeML;
+        if (awayDelta !== 0 || homeDelta !== 0) {
+          next[gameId] = { awayDelta, homeDelta, changedAt: now };
+        }
+      }
+      return next;
+    });
+    prevOddsRef.current = oddsByGameId;
+  }, [closeWithOdds.data, oddsByGameId]);
 
   const upcomingDays = usePolling<UpcomingDay[]>({
     fetcher: async () => {
@@ -194,11 +245,10 @@ export default function ClosestGamesTile({ leagues, refreshInterval }: ClosestGa
       </h2>
 
       <p className="text-[10px] text-gray-600 mb-1.5 tracking-wider font-medium">
-        {leagues.map(leagueDisplayName).join(' · ')}
+        {leagues.map(leagueDisplayName).join(' . ')}
       </p>
 
       <div className="flex-1 overflow-y-auto scrollbar-hide">
-        {/* Today's games */}
         {todayGames.loading ? (
           <div className="space-y-1">
             {Array.from({ length: 4 }).map((_, i) => <ScoreRowSkeleton key={i} />)}
@@ -207,7 +257,7 @@ export default function ClosestGamesTile({ leagues, refreshInterval }: ClosestGa
           <div className="space-y-0.5">
             <AnimatePresence mode="popLayout">
               {todayGames.data!.map((game, i) => (
-                <GameCard key={game.id} game={game} index={i} odds={oddsByGameId[game.id]} />
+                <GameCard key={game.id} game={game} index={i} odds={oddsByGameId[game.id]} trend={oddsTrendByGameId[game.id]} />
               ))}
             </AnimatePresence>
           </div>
@@ -217,7 +267,6 @@ export default function ClosestGamesTile({ leagues, refreshInterval }: ClosestGa
           </div>
         )}
 
-        {/* Upcoming days */}
         {(upcomingDays.data || []).map((day) => (
           <div key={day.date} className="mt-3">
             <div className="flex items-center gap-1.5 mb-1 px-1">

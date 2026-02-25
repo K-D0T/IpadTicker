@@ -72,6 +72,25 @@ export default function Dashboard() {
 
   const canExpand = music.connected && music.track?.isPlaying;
 
+  const applyScene = useCallback((scene: 'custom' | 'game-night' | 'halftime' | 'music-mode') => {
+    const sceneToPage = scene === 'music-mode' ? 1 : 0;
+    const sceneRefresh = scene === 'game-night' ? 15000 : scene === 'music-mode' ? 60000 : 30000;
+    const sceneVolume = scene === 'game-night' ? 70 : scene === 'halftime' ? 45 : scene === 'music-mode' ? 80 : music.volume;
+
+    setSettings((prev) => ({
+      ...prev,
+      scenePreset: scene,
+      refreshInterval: scene === 'custom' ? prev.refreshInterval : sceneRefresh,
+    }));
+
+    scrollToPage(sceneToPage);
+
+    if (scene !== 'custom') {
+      music.setVolume(sceneVolume);
+      void music.controlAction('volume', sceneVolume);
+    }
+  }, [setSettings, music]);
+
   return (
     <div className={`h-screen w-screen bg-[var(--color-background)] flex flex-col overflow-hidden ${settings.kioskMode ? 'kiosk-mode' : ''}`}>
       <ThemeSync lightMode={settings.lightMode} />
@@ -167,6 +186,7 @@ export default function Dashboard() {
                     refreshInterval={settings.refreshInterval}
                     razorbacksLeague={settings.razorbacksSport}
                     selectedLeagues={settings.selectedLeagues}
+                    favoriteTeamIds={settings.favoriteTeamIds}
                   />
                 </div>
               </div>
@@ -188,6 +208,11 @@ export default function Dashboard() {
             refreshInterval={settings.refreshInterval}
             razorbacksLeague={settings.razorbacksSport}
             leagues={settings.selectedLeagues}
+            favoriteTeamIds={settings.favoriteTeamIds}
+            alertCloseMargin={settings.alertCloseMargin}
+            quietHoursEnabled={settings.quietHoursEnabled}
+            quietHoursStart={settings.quietHoursStart}
+            quietHoursEnd={settings.quietHoursEnd}
           />
         </div>
 
@@ -208,6 +233,7 @@ export default function Dashboard() {
         onClose={() => setDrawerOpen(false)}
         settings={settings}
         onChange={setSettings}
+        onApplyScene={applyScene}
       />
     </div>
   );

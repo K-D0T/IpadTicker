@@ -6,6 +6,7 @@ export interface NowPlaying {
   isPlaying: boolean;
   progressMs: number;
   durationMs: number;
+  volumePercent?: number | null;
 }
 
 export interface MusicDevice {

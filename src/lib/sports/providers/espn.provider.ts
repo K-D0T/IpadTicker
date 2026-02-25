@@ -12,6 +12,14 @@ const LEAGUE_PATHS: Record<League, string> = {
 const TEAM_IDS: Record<string, Record<League, string>> = {
   BAL: { nfl: '33', ncaaf: '', ncaam: '' },
   ARK: { nfl: '', ncaaf: '8', ncaam: '8' },
+  KC: { nfl: '12', ncaaf: '', ncaam: '' },
+  BUF: { nfl: '2', ncaaf: '', ncaam: '' },
+  DAL: { nfl: '6', ncaaf: '', ncaam: '' },
+  SF: { nfl: '25', ncaaf: '', ncaam: '' },
+  DUKE: { nfl: '', ncaaf: '', ncaam: '150' },
+  UNC: { nfl: '', ncaaf: '', ncaam: '153' },
+  ALA: { nfl: '', ncaaf: '333', ncaam: '' },
+  LSU: { nfl: '', ncaaf: '99', ncaam: '' },
 };
 
 function mapStatus(espnStatus: string): GameStatus {

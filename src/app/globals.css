@@ -194,6 +194,19 @@ body {
   overflow: hidden;
 }
 
+.ticker-alert {
+  border-top-color: rgba(249, 115, 22, 0.45);
+  box-shadow:
+    0 -4px 20px rgba(249, 115, 22, 0.25),
+    inset 0 1px 0 rgba(255, 200, 120, 0.22);
+  animation: tickerAlertPulse 1.1s ease-in-out infinite;
+}
+
+@keyframes tickerAlertPulse {
+  0%, 100% { filter: saturate(1); }
+  50% { filter: saturate(1.25); }
+}
+
 [data-theme="light"] .ticker-bar {
   background: linear-gradient(
     90deg,

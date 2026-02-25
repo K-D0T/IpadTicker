@@ -56,6 +56,30 @@ export async function getNextGame(teamSlug: string, leagueOverride?: League): Pr
   return next;
 }
 
+export async function getNextGameByTeamKey(teamKey: string, league: League): Promise<Game | null> {
+  const cacheKey = `next-game-team:${teamKey}:${league}`;
+  const cached = cache.get<Game | null>(cacheKey);
+  if (cached !== null) return cached;
+
+  const provider = getProvider();
+  const mock = getMockProvider();
+
+  const games = await withFallback(
+    () => provider.getTeamSchedule(league, teamKey),
+    () => mock.getTeamSchedule(league, teamKey),
+  );
+
+  const now = Date.now();
+  const upcoming = games
+    .filter((g) => g.status === 'pre' && new Date(g.startTime).getTime() > now)
+    .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+  const live = games.find((g) => g.status === 'live');
+  const next = live || upcoming[0] || null;
+  cache.set(cacheKey, next, DEFAULT_TTL);
+  return next;
+}
+
 export async function getClosestGames(league: League, limit = 5): Promise<Game[]> {
   const cacheKey = `closest:${league}:${limit}`;
   const cached = cache.get<Game[]>(cacheKey);

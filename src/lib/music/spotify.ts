@@ -225,6 +225,13 @@ async function spotifyFetch(urlPath: string, options: RequestInit = {}): Promise
   });
 }
 
+async function assertSpotifyOk(res: Response, action: string): Promise<void> {
+  if (res.ok) return;
+  const text = await res.text();
+  const suffix = text ? `: ${text.slice(0, 240)}` : '';
+  throw new Error(`Spotify ${action} failed (${res.status})${suffix}`);
+}
+
 export function isSpotifyConnected(): boolean {
   return getTokens() !== null;
 }
@@ -239,6 +246,17 @@ export function getSpotifyCookieHeaders(tokens: SpotifyTokens, secure = false): 
 }
 
 export class SpotifyMusicService implements MusicService {
+  private async getActiveDeviceId(): Promise<string | null> {
+    const res = await spotifyFetch('/me/player');
+    if (!res.ok) return null;
+    try {
+      const data = await res.json();
+      return data?.device?.id ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async getNowPlaying(): Promise<NowPlaying | null> {
     const res = await spotifyFetch('/me/player/currently-playing');
 
@@ -257,26 +275,32 @@ export class SpotifyMusicService implements MusicService {
       isPlaying: data.is_playing ?? false,
       progressMs: data.progress_ms ?? 0,
       durationMs: track.duration_ms ?? 0,
+      volumePercent: data.device?.volume_percent ?? null,
     };
   }
 
   async control(req: MusicControlRequest): Promise<void> {
     switch (req.action) {
       case 'play':
-        await spotifyFetch('/me/player/play', { method: 'PUT' });
+        await assertSpotifyOk(await spotifyFetch('/me/player/play', { method: 'PUT' }), 'play');
         break;
       case 'pause':
-        await spotifyFetch('/me/player/pause', { method: 'PUT' });
+        await assertSpotifyOk(await spotifyFetch('/me/player/pause', { method: 'PUT' }), 'pause');
         break;
       case 'next':
-        await spotifyFetch('/me/player/next', { method: 'POST' });
+        await assertSpotifyOk(await spotifyFetch('/me/player/next', { method: 'POST' }), 'next');
         break;
       case 'prev':
-        await spotifyFetch('/me/player/previous', { method: 'POST' });
+        await assertSpotifyOk(await spotifyFetch('/me/player/previous', { method: 'POST' }), 'previous');
         break;
       case 'volume':
         if (req.value != null) {
-          await spotifyFetch(`/me/player/volume?volume_percent=${req.value}`, { method: 'PUT' });
+          const volume = Math.max(0, Math.min(100, Math.round(req.value)));
+          const deviceId = await this.getActiveDeviceId();
+          const path = deviceId
+            ? `/me/player/volume?volume_percent=${volume}&device_id=${encodeURIComponent(deviceId)}`
+            : `/me/player/volume?volume_percent=${volume}`;
+          await assertSpotifyOk(await spotifyFetch(path, { method: 'PUT' }), 'set volume');
         }
         break;
     }

@@ -10,6 +10,7 @@ export interface NowPlaying {
   isPlaying: boolean;
   progressMs: number;
   durationMs: number;
+  volumePercent?: number | null;
 }
 
 export interface MusicPlayerState {
@@ -43,6 +44,9 @@ export function useMusicPlayer(): MusicPlayerState {
       const res = await fetch('/api/music/now-playing');
       const data = await res.json();
       setTrack(data.nowPlaying || null);
+      if (typeof data?.nowPlaying?.volumePercent === 'number') {
+        setVolume(Math.max(0, Math.min(100, Math.round(data.nowPlaying.volumePercent))));
+      }
     } catch {
       setTrack(null);
     }
@@ -56,13 +60,20 @@ export function useMusicPlayer(): MusicPlayerState {
 
   const controlAction = useCallback(async (action: string, value?: number) => {
     try {
-      await fetch('/api/music/control', {
+      const res = await fetch('/api/music/control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, value }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || `Control failed (${res.status})`);
+      }
       setTimeout(poll, 300);
-    } catch { /* */ }
+    } catch (err) {
+      console.warn('[music control]', err);
+      setTimeout(poll, 300);
+    }
   }, [poll]);
 
   return { track, connected, configured, volume, setVolume, controlAction, poll };

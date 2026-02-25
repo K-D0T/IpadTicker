@@ -32,9 +32,10 @@ export async function POST(request: NextRequest) {
     return res;
   } catch (err) {
     console.error('[API /music/control]', err);
+    const message = err instanceof Error ? err.message : 'Music service not configured (501)';
     return NextResponse.json(
-      { error: 'Music service not configured (501)' },
-      { status: 501 },
+      { error: message },
+      { status: 502 },
     );
   }
 }
