@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Monitor, RefreshCw, Tv, Trophy, Music, Bell, User, MoonStar } from 'lucide-react';
 import { AppSettings } from '@/lib/settings';
 import { League } from '@/lib/sports/types';
-import { FAVORITE_TEAM_OPTIONS } from '@/lib/sports/favorites';
+import { FAVORITE_TEAM_GROUPS } from '@/lib/sports/favorites';
 
 interface SettingsDrawerProps {
   open: boolean;
@@ -22,40 +22,35 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
         type="button"
         role="switch"
         aria-checked={checked}
+        data-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative w-11 h-6 rounded-full transition-colors ${
-          checked ? 'bg-cyan-500' : 'bg-gray-600'
-        }`}
+        className="glow-toggle touch-manipulation"
       >
-        <span
-          className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-            checked ? 'translate-x-5' : 'translate-x-0'
-          }`}
-        />
+        <span className="glow-toggle-knob" />
       </button>
     </label>
   );
 }
 
-function SelectRow({ label, value, options, onChange }: {
+function SelectRow({ label, value, options, onChange, glow = 'cyan' }: {
   label: string;
   value: string;
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
+  glow?: 'cyan' | 'amber' | 'orange' | 'green';
 }) {
   return (
     <div className="py-2">
-      <p className="text-sm text-gray-300 mb-1.5">{label}</p>
+      {label && <p className="text-sm text-gray-300 mb-1.5">{label}</p>}
       <div className="flex gap-2 flex-wrap">
         {options.map((opt) => (
           <button
             type="button"
             key={opt.value}
             onClick={() => onChange(opt.value)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors touch-manipulation ${
-              value === opt.value
-                ? 'bg-cyan-500 text-white'
-                : 'bg-white/10 text-gray-400 hover:bg-white/20'
+            data-glow={glow}
+            className={`glow-pill min-h-11 flex items-center justify-center px-3 py-1.5 text-xs font-bold tracking-wide touch-manipulation ${
+              value === opt.value ? 'glow-pill-active' : ''
             }`}
           >
             {opt.label}
@@ -113,21 +108,22 @@ export default function SettingsDrawer({ open, onClose, settings, onChange, onAp
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed right-0 top-0 bottom-0 w-[360px] max-w-[90vw] bg-gray-900 border-l border-white/10 z-50 overflow-y-auto"
+            className="drawer-glass fixed right-0 top-0 bottom-0 w-[360px] max-w-[90vw] z-50 overflow-y-auto scrollbar-hide relative"
           >
-            <div className="p-5">
+            <div className="led-dots pointer-events-none absolute inset-0 z-0" style={{ opacity: 0.05 }} />
+            <div className="relative z-10 p-5">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold text-white">Settings</h2>
+                <h2 className="text-xs font-bold text-gray-500 tracking-[0.2em] uppercase header-title">Settings</h2>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="p-2 rounded-lg hover:bg-white/10 transition-colors touch-manipulation"
+                  className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors touch-manipulation"
                 >
                   <X className="w-5 h-5 text-gray-400" />
                 </button>
               </div>
 
-              <section className="mb-6">
+              <section className="drawer-section mb-6 pb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <MoonStar className="w-4 h-4 text-amber-400" />
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Scene Presets</h3>
@@ -136,28 +132,32 @@ export default function SettingsDrawer({ open, onClose, settings, onChange, onAp
                   <button
                     type="button"
                     onClick={() => applySceneAndClose('game-night')}
-                    className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${settings.scenePreset === 'game-night' ? 'bg-amber-500 text-black' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
+                    data-glow="amber"
+                    className={`glow-pill min-h-11 flex items-center justify-center px-3 py-2 text-xs font-bold tracking-wide ${settings.scenePreset === 'game-night' ? 'glow-pill-active' : ''}`}
                   >
                     Game Night
                   </button>
                   <button
                     type="button"
                     onClick={() => applySceneAndClose('halftime')}
-                    className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${settings.scenePreset === 'halftime' ? 'bg-orange-500 text-black' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
+                    data-glow="orange"
+                    className={`glow-pill min-h-11 flex items-center justify-center px-3 py-2 text-xs font-bold tracking-wide ${settings.scenePreset === 'halftime' ? 'glow-pill-active' : ''}`}
                   >
                     Halftime
                   </button>
                   <button
                     type="button"
                     onClick={() => applySceneAndClose('music-mode')}
-                    className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${settings.scenePreset === 'music-mode' ? 'bg-green-500 text-black' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
+                    data-glow="green"
+                    className={`glow-pill min-h-11 flex items-center justify-center px-3 py-2 text-xs font-bold tracking-wide ${settings.scenePreset === 'music-mode' ? 'glow-pill-active' : ''}`}
                   >
                     Music Mode
                   </button>
                   <button
                     type="button"
                     onClick={() => applySceneAndClose('custom')}
-                    className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${settings.scenePreset === 'custom' ? 'bg-cyan-500 text-black' : 'bg-white/10 text-gray-300 hover:bg-white/20'}`}
+                    data-glow="cyan"
+                    className={`glow-pill min-h-11 flex items-center justify-center px-3 py-2 text-xs font-bold tracking-wide ${settings.scenePreset === 'custom' ? 'glow-pill-active' : ''}`}
                   >
                     Custom
                   </button>
@@ -167,32 +167,40 @@ export default function SettingsDrawer({ open, onClose, settings, onChange, onAp
                 </p>
               </section>
 
-              <section className="mb-6">
+              <section className="drawer-section mb-6 pb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <User className="w-4 h-4 text-cyan-400" />
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Personal Cards</h3>
                 </div>
-                <p className="text-[11px] text-gray-500 mb-2">Pick up to 6 favorites</p>
-                <div className="flex flex-wrap gap-2">
-                  {FAVORITE_TEAM_OPTIONS.map((team) => {
-                    const selected = settings.favoriteTeamIds.includes(team.id);
-                    return (
-                      <button
-                        type="button"
-                        key={team.id}
-                        onClick={() => toggleFavoriteTeam(team.id)}
-                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
-                          selected ? 'bg-cyan-500 text-white' : 'bg-white/10 text-gray-400 hover:bg-white/20'
-                        }`}
-                      >
-                        {team.label}
-                      </button>
-                    );
-                  })}
+                <p className="text-[11px] text-gray-500 mb-3">
+                  Pick up to 6 favorites <span className="text-gray-400 font-semibold">({settings.favoriteTeamIds.length}/6 selected)</span>
+                </p>
+                <div className="space-y-4">
+                  {FAVORITE_TEAM_GROUPS.map((group) => (
+                    <div key={group.league}>
+                      <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-gray-600 mb-1.5">{group.label}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {group.teams.map((team) => {
+                          const selected = settings.favoriteTeamIds.includes(team.id);
+                          return (
+                            <button
+                              type="button"
+                              key={team.id}
+                              onClick={() => toggleFavoriteTeam(team.id)}
+                              data-glow="cyan"
+                              className={`glow-pill min-h-11 flex items-center justify-center px-2.5 py-1.5 text-[11px] font-bold tracking-wide ${selected ? 'glow-pill-active' : ''}`}
+                            >
+                              {team.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </section>
 
-              <section className="mb-6">
+              <section className="drawer-section mb-6 pb-6">
                 <SelectRow
                   label="Razorbacks Sport"
                   value={settings.razorbacksSport}
@@ -204,7 +212,7 @@ export default function SettingsDrawer({ open, onClose, settings, onChange, onAp
                 />
               </section>
 
-              <section className="mb-6">
+              <section className="drawer-section mb-6 pb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <Tv className="w-4 h-4 text-orange-400" />
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Closest Games Leagues</h3>
@@ -219,10 +227,9 @@ export default function SettingsDrawer({ open, onClose, settings, onChange, onAp
                       type="button"
                       key={opt.value}
                       onClick={() => toggleLeague(opt.value)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors touch-manipulation ${
-                        settings.selectedLeagues.includes(opt.value)
-                          ? 'bg-orange-500 text-white'
-                          : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                      data-glow="orange"
+                      className={`glow-pill min-h-11 flex items-center justify-center px-3 py-1.5 text-xs font-bold tracking-wide touch-manipulation ${
+                        settings.selectedLeagues.includes(opt.value) ? 'glow-pill-active' : ''
                       }`}
                     >
                       {opt.label}
@@ -231,7 +238,7 @@ export default function SettingsDrawer({ open, onClose, settings, onChange, onAp
                 </div>
               </section>
 
-              <section className="mb-6">
+              <section className="drawer-section mb-6 pb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <Bell className="w-4 h-4 text-red-400" />
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Alert Controls</h3>
@@ -276,7 +283,7 @@ export default function SettingsDrawer({ open, onClose, settings, onChange, onAp
                 )}
               </section>
 
-              <section className="mb-6">
+              <section className="drawer-section mb-6 pb-6">
                 <div className="flex items-center gap-2 mb-3">
                   <RefreshCw className="w-4 h-4 text-green-400" />
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Refresh Interval</h3>
@@ -290,10 +297,11 @@ export default function SettingsDrawer({ open, onClose, settings, onChange, onAp
                     { value: '60000', label: '60s' },
                   ]}
                   onChange={(v) => update({ refreshInterval: parseInt(v, 10) })}
+                  glow="green"
                 />
               </section>
 
-              <section className="mb-6 space-y-1">
+              <section className="drawer-section mb-6 pb-6 space-y-1">
                 <div className="flex items-center gap-2 mb-3">
                   <Monitor className="w-4 h-4 text-purple-400" />
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Display</h3>
@@ -326,8 +334,8 @@ export default function SettingsDrawer({ open, onClose, settings, onChange, onAp
               </section>
 
               {settings.kioskMode && (
-                <section className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
-                  <p className="text-xs text-purple-300 font-medium mb-1">Kiosk Mode Active</p>
+                <section className="glow-pill glow-pill-active p-3" data-glow="purple">
+                  <p className="text-xs text-purple-300 font-bold tracking-wide mb-1">Kiosk Mode Active</p>
                   <p className="text-[10px] text-purple-400/70 leading-relaxed">
                     For iPad: Add to Home Screen, then enable Guided Access in Accessibility settings.
                   </p>

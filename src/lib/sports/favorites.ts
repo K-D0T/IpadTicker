@@ -63,6 +63,19 @@ export const FAVORITE_TEAM_OPTIONS: FavoriteTeamOption[] = [
   { id: 'missouri', label: 'Missouri Tigers', teamKey: 'MIZ', defaultLeague: 'ncaaf', icon: 'MIZ' },
 ];
 
+const GROUP_LABELS: Record<League, string> = {
+  nfl: 'NFL',
+  ncaaf: 'NCAA Football',
+  ncaam: 'NCAA Basketball',
+};
+
+export const FAVORITE_TEAM_GROUPS: { league: League; label: string; teams: FavoriteTeamOption[] }[] =
+  (['nfl', 'ncaam', 'ncaaf'] as League[]).map((league) => ({
+    league,
+    label: GROUP_LABELS[league],
+    teams: FAVORITE_TEAM_OPTIONS.filter((t) => t.defaultLeague === league),
+  }));
+
 export function resolveFavoriteTeams(
   favoriteTeamIds: string[],
   razorbacksLeague: 'ncaaf' | 'ncaam',
