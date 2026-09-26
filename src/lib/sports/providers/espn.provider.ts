@@ -133,6 +133,58 @@ function parseCompetition(event: any, league: League): Game {
 
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
+export interface GameOdds {
+  book: string;
+  moneyline?: { awayML: number; homeML: number };
+  spread?: { awayPoint: number; homePoint: number };
+  total?: { point: number; overPrice: number; underPrice: number };
+}
+
+/** Free odds pulled from ESPN's public summary endpoint (DraftKings line ESPN itself displays) — no API key needed. */
+export async function getEventOdds(league: League, eventId: string): Promise<GameOdds | null> {
+  const path = LEAGUE_PATHS[league];
+  const url = `${ESPN_BASE}${path}/summary?event=${eventId}`;
+
+  try {
+    const res = await fetch(url, {
+      next: { revalidate: 60 },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    /* eslint-disable @typescript-eslint/no-explicit-any */
+    const pick = (data.pickcenter as any[] | undefined)?.[0];
+    /* eslint-enable @typescript-eslint/no-explicit-any */
+    if (!pick) return null;
+
+    const odds: GameOdds = { book: pick.provider?.name || 'ESPN' };
+
+    const awayML = pick.awayTeamOdds?.moneyLine;
+    const homeML = pick.homeTeamOdds?.moneyLine;
+    if (typeof awayML === 'number' && typeof homeML === 'number') {
+      odds.moneyline = { awayML, homeML };
+    }
+
+    if (typeof pick.spread === 'number') {
+      // pick.spread is always home-team-relative (negative = home favored).
+      odds.spread = { homePoint: pick.spread, awayPoint: -pick.spread };
+    }
+
+    if (typeof pick.overUnder === 'number') {
+      odds.total = {
+        point: pick.overUnder,
+        overPrice: typeof pick.overOdds === 'number' ? pick.overOdds : -110,
+        underPrice: typeof pick.underOdds === 'number' ? pick.underOdds : -110,
+      };
+    }
+
+    return odds;
+  } catch {
+    return null;
+  }
+}
+
 export class ESPNProvider implements SportsProvider {
   name = 'ESPNProvider';
 
